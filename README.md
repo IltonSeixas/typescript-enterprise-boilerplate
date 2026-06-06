@@ -1,0 +1,274 @@
+# typescript-enterprise-boilerplate
+
+[![CI](https://github.com/IltonSeixas/typescript-enterprise-boilerplate/actions/workflows/ci.yml/badge.svg)](https://github.com/IltonSeixas/typescript-enterprise-boilerplate/actions/workflows/ci.yml)
+[![Docker](https://github.com/IltonSeixas/typescript-enterprise-boilerplate/actions/workflows/docker.yml/badge.svg)](https://github.com/IltonSeixas/typescript-enterprise-boilerplate/actions/workflows/docker.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+
+Production-ready enterprise backend boilerplate in **TypeScript** — built on Clean Architecture, Domain-Driven Design, and Test-Driven Development. Runs immediately with an in-memory adapter; plug in PostgreSQL when ready for production.
+
+---
+
+## Philosophy
+
+TypeScript's type system is the first line of defense. This boilerplate uses it deliberately: Value Objects that cannot be constructed in an invalid state, use cases that are typed end-to-end, and repository interfaces that compile away any coupling between domain logic and infrastructure. The domain layer has no framework imports.
+
+---
+
+## Architecture
+
+```
+src/
+├── domain/               # Enterprise business rules — zero runtime deps
+│   ├── entities/         # Aggregates and Entities
+│   ├── value-objects/    # Immutable, self-validating values
+│   ├── repositories/     # Port interfaces (TypeScript interfaces)
+│   └── errors/           # Domain error classes
+│
+├── application/          # Use cases — depends only on domain
+│   ├── use-cases/        # One class per use case
+│   ├── ports/            # Input/output port interfaces
+│   └── dtos/             # Zod-validated DTOs
+│
+├── infrastructure/       # Adapters — implements domain interfaces
+│   ├── persistence/
+│   │   ├── in-memory/    # Default: zero-config, runs immediately
+│   │   └── postgres/     # Production: Drizzle ORM + PostgreSQL
+│   ├── security/         # Argon2id password hashing
+│   ├── cache/            # Redis adapter (ioredis)
+│   └── telemetry/        # OpenTelemetry setup
+│
+├── interfaces/           # Entry points
+│   ├── http/             # Fastify routes, plugins, middleware
+│   └── grpc/             # @grpc/grpc-js service implementations
+│
+└── main.ts               # Wiring: build container, start server
+```
+
+### Dependency rule
+
+```
+interfaces/ → application/ → domain/
+infrastructure/ → application/ → domain/
+```
+
+`domain/` and `application/` never import from `infrastructure/` or `interfaces/`.
+
+---
+
+## Stack
+
+| Concern | Library |
+|---|---|
+| HTTP framework | `fastify` |
+| Schema validation | `zod` |
+| gRPC | `@grpc/grpc-js` + `@grpc/proto-loader` |
+| Database (production) | `drizzle-orm` + `postgres` |
+| Password hashing | `argon2` (native bindings) |
+| JWT | `@fastify/jwt` |
+| Observability | `@opentelemetry/sdk-node` |
+| Structured logging | `pino` (built into Fastify) |
+| DI container | `tsyringe` |
+| Testing | `vitest` + `@vitest/coverage-v8` |
+| Linting | `eslint` + `@typescript-eslint` |
+| Runtime | `Node.js 22 LTS` or `Bun` |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 22 LTS or Bun 1.1+
+- Optional for production: PostgreSQL 15+, Redis 7+
+
+### Run immediately (in-memory, zero config)
+
+```bash
+git clone https://github.com/your-org/typescript-enterprise-boilerplate
+cd typescript-enterprise-boilerplate
+
+# with npm
+npm install && npm run dev
+
+# with Bun
+bun install && bun run dev
+```
+
+The server starts on `http://localhost:3000`. No database required.
+
+### Run with PostgreSQL
+
+```bash
+cp .env.example .env
+# Edit .env: set DATABASE_URL, JWT_SECRET, etc.
+
+npm run dev -- --adapter=postgres
+```
+
+---
+
+## Security
+
+### Password Hashing — Argon2id
+
+Passwords are hashed with **Argon2id** via the `argon2` package, which uses native bindings to the reference C implementation. bcrypt is not used.
+
+Parameters follow OWASP recommendations:
+- Memory: 65536 KB (64 MB)
+- Iterations: 3
+- Parallelism: 4
+
+The `PasswordHasher` interface in `domain/repositories/` abstracts the algorithm — use cases never call crypto directly.
+
+### Authentication Flow
+
+- **Access token**: JWT HS256, TTL 15 min, validated by Fastify JWT plugin
+- **Refresh token**: opaque UUID (crypto.randomUUID), stored in Redis with TTL 7 days, rotated on every use, delivered via HttpOnly cookie
+- **Revocation**: delete the Redis key to immediately invalidate the session
+
+### Security (Fastify plugins, applied globally)
+
+- Rate limiting: `@fastify/rate-limit` with sliding window per IP
+- Security headers: `@fastify/helmet` (CSP, HSTS, X-Frame-Options, etc.)
+- CORS: `@fastify/cors` with explicit allow-list, never `*` in production
+- Input validation: Zod on every route — invalid input returns 400 before reaching the use case
+
+---
+
+## API
+
+### REST — `http://localhost:3000`
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/v1/auth/register` | Register a new user |
+| `POST` | `/api/v1/auth/login` | Authenticate, receive tokens |
+| `POST` | `/api/v1/auth/refresh` | Rotate refresh token |
+| `POST` | `/api/v1/auth/logout` | Revoke refresh token |
+| `GET` | `/api/v1/users/me` | Get authenticated user profile |
+| `GET` | `/health` | Health check |
+| `GET` | `/metrics` | Prometheus metrics |
+
+### gRPC — `localhost:50051`
+
+Proto definitions in `proto/`. Regenerate TypeScript types with:
+
+```bash
+npm run proto:gen
+```
+
+---
+
+## Testing
+
+```bash
+npm run test              # unit tests (no external deps, uses in-memory adapter)
+npm run test:coverage     # coverage report
+npm run test:integration  # integration tests (requires Postgres + Redis)
+```
+
+### Structure
+
+- **Unit tests**: co-located as `*.spec.ts`. Domain entities, value objects, and use cases tested in complete isolation. Repository mocks are TypeScript classes implementing the port interface — no mocking library needed for simple cases; `vitest`'s `vi.fn()` for complex scenarios.
+- **Integration tests**: `src/**/*.integration.spec.ts`. Run against real adapters using Testcontainers.
+
+### TDD Approach
+
+Start from the use case interface. Write a test that constructs the use case with mock repositories, calls the input port, and asserts on the output port. The compile-time check that the mock satisfies the interface eliminates an entire class of bugs before the test runs.
+
+---
+
+## Observability
+
+- **Traces**: OpenTelemetry auto-instrumentation covers Fastify and outgoing HTTP; use cases emit custom spans
+- **Metrics**: Prometheus metrics at `/metrics` via `prom-client`
+- **Logs**: structured JSON via Pino, correlated with trace IDs
+
+```env
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+```
+
+---
+
+## Configuration
+
+All configuration via environment variables, validated with Zod at startup (invalid config fails fast).
+
+| Variable | Default | Description |
+|---|---|---|
+| `HOST` | `0.0.0.0` | Bind address |
+| `PORT` | `3000` | HTTP port |
+| `GRPC_PORT` | `50051` | gRPC port |
+| `DATABASE_URL` | — | PostgreSQL connection string |
+| `REDIS_URL` | — | Redis URL |
+| `JWT_SECRET` | — | HS256 signing key (min 32 chars) |
+| `JWT_ACCESS_TTL` | `900` | Access token TTL (seconds) |
+| `JWT_REFRESH_TTL` | `604800` | Refresh token TTL (seconds) |
+| `RATE_LIMIT_MAX` | `100` | Max requests per window per IP |
+| `LOG_LEVEL` | `info` | Pino log level |
+| `ADAPTER` | `memory` | Persistence adapter: `memory` or `postgres` |
+
+---
+
+## Docker
+
+```bash
+# Multi-stage build — Node.js Alpine final image
+docker build -t typescript-enterprise-boilerplate .
+
+docker run -p 3000:3000 -p 50051:50051 --env-file .env typescript-enterprise-boilerplate
+```
+
+```bash
+# Full stack: app + postgres + redis + jaeger
+docker compose up
+```
+
+---
+
+## CI/CD
+
+GitHub Actions pipelines in `.github/workflows/`:
+
+| Workflow | Trigger | Steps |
+|---|---|---|
+| `ci.yml` | push / PR | typecheck, lint, test, audit |
+| `docker.yml` | push to `main` | build + push to GHCR |
+| `release.yml` | tag `v*` | build, create GitHub Release |
+
+`npm audit` runs on every push. `tsc --noEmit` enforces strict TypeScript — no `any`, no implicit returns.
+
+---
+
+## Plugging in a Real Database
+
+Implement the `UserRepository` interface from `domain/repositories/` and register your adapter in the DI container (`main.ts`). The in-memory adapter stays available for local development and unit tests.
+
+---
+
+## Author
+
+**Ilton Seixas** — [contact@iltonseixas.com](mailto:contact@iltonseixas.com)
+
+---
+
+## Disclaimer
+
+This boilerplate is provided **as-is**, for educational and reference purposes only.
+
+**No warranty.** The author makes no representations or warranties of any kind, express or implied, regarding the correctness, completeness, reliability, suitability, or availability of this software for any purpose. Your use of this code is entirely at your own risk.
+
+**No liability.** To the fullest extent permitted by applicable law, the author shall not be held liable for any direct, indirect, incidental, special, consequential, or punitive damages arising from the use or misuse of this software — including but not limited to data breaches, security incidents, financial loss, service downtime, or regulatory non-compliance.
+
+**Misuse.** The author is not responsible for any unlawful, harmful, or unethical use of this codebase by any party.
+
+**Security.** Security patterns and cryptographic implementations in this project follow industry best practices at the time of writing. However, the threat landscape evolves. You are solely responsible for auditing, hardening, and maintaining any system you build on top of this code.
+
+> **Never blindly trust third-party code — including this project.**
+> The author strongly recommends that you read and understand every line before deploying to production. Security-sensitive components (authentication, password hashing, token management, input validation) deserve particular scrutiny. No code review by a stranger on the internet replaces your own.
+
+---
+
+## License
+
+MIT — Copyright (c) Ilton Seixas
