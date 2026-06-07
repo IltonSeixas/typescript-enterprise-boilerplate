@@ -45,38 +45,37 @@ Timing-safe comparison is handled internally by the `argon2` library. `argon2.ve
 
 ### Access Token (JWT HS256)
 
-- Algorithm: HS256 (HMAC-SHA256) via `@fastify/jwt`
-- TTL: 15 minutes
-- Claims: `sub` (user ID), `iat`, `exp`, `jti` (unique token ID)
-- Storage: in-memory on the client — never in `localStorage` or cookies
-- Validation: signature + expiry checked on every authenticated request via Fastify preHandler hook
+- Algorithm: HS256 (HMAC-SHA256) via `jsonwebtoken`, signed in `JwtService`
+- TTL: 15 minutes (hardcoded `JwtAccessTtl` constant — 900 seconds)
+- Claims: `sub` (user ID), `jti` (unique token ID)
+- Transport: returned in the JSON response body (`accessToken`); the client is responsible for storage and for sending it as `Authorization: Bearer <token>`
+- Validation: signature + expiry checked on every authenticated request via the `authPlugin` Fastify preHandler hook
 
 ### Refresh Token
 
-- Format: opaque UUID v4 via the `crypto.randomUUID()` Web Crypto global (built into the runtime, no library)
-- Storage: server-side in Redis with TTL 7 days
-- Transport: HttpOnly, Secure, SameSite=Strict cookie via `@fastify/cookie`
+- Format: opaque UUID v4 via `crypto.randomUUID()` (built into the runtime, no library)
+- Storage: server-side in Redis with TTL 7 days (hardcoded `JwtRefreshTtl` constant — 604800 seconds)
+- Transport: `HttpOnly`, `Secure`, `SameSite=Strict` cookie set via `@fastify/cookie`, scoped to the `/api/v1/auth` path — never exposed to client-side JavaScript
 - Rotation: a new refresh token is issued on every use; the old one is immediately invalidated
 - Revocation: deleting the Redis key invalidates the session instantly
 
 ### Token Revocation
 
-Access tokens cannot be revoked before expiry (stateless by design). The 15-minute TTL limits the exposure window. If immediate revocation is required, implement a short-lived Redis blocklist for `jti` values.
+Access tokens cannot be revoked before expiry (stateless by design). The 15-minute TTL limits the exposure window. Refresh tokens, by contrast, are revocable instantly because they are stored server-side in Redis.
 
 ---
 
 ## Rate Limiting
 
-Implemented via `@fastify/rate-limit` using a sliding window counter per IP address backed by Redis.
+Implemented via `@fastify/rate-limit` with fixed in-process limits — not Redis-backed and not environment-configurable.
 
 ```
-Default: 100 requests / 60 seconds per IP
-Configurable via: RATE_LIMIT_MAX environment variable
+Global: 100 requests / 60 seconds per IP (registered in main.ts)
 ```
 
-Authentication endpoints have a stricter independent limit to mitigate credential stuffing.
+There is no separate, stricter limit on authentication routes; the global limit applies uniformly.
 
-On limit exceeded, the server returns `429 Too Many Requests` with a `Retry-After` header.
+On limit exceeded, the server returns `429 Too Many Requests` with a structured JSON error body.
 
 ---
 
@@ -91,18 +90,23 @@ Applied globally via `@fastify/helmet` on every response:
 | `X-Frame-Options` | `DENY` |
 | `Content-Security-Policy` | `default-src 'none'` (API — no HTML served) |
 | `Referrer-Policy` | `no-referrer` |
-| `Permissions-Policy` | `geolocation=(), camera=(), microphone=()` |
+
+`Permissions-Policy` is not configured.
 
 ---
 
 ## CORS
 
-CORS is configured via `@fastify/cors` with an explicit allow-list. The wildcard `*` is never permitted in production.
+CORS is configured via `@fastify/cors` with an explicit allow-list read from `ALLOWED_ORIGINS`. The wildcard `*` is never permitted — an empty allow-list disables cross-origin requests entirely.
 
 ```typescript
-await app.register(cors, {
-  origin: config.allowedOrigins, // from environment variable
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+const allowedOrigins = (process.env['ALLOWED_ORIGINS'] ?? '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter((o) => o.length > 0);
+
+await app.register(fastifyCors, {
+  origin: allowedOrigins.length > 0 ? allowedOrigins : false,
   credentials: true,
 });
 ```
@@ -127,7 +131,7 @@ Domain-level invariants are re-enforced inside value object constructors regardl
 
 ## SQL Injection Prevention
 
-All database queries use Drizzle ORM's parameterized query builder. Template literal interpolation into raw SQL is never used.
+The default in-memory adapter performs no SQL queries at all. The PostgreSQL adapter (`infrastructure/persistence/postgres/`) is implemented against Drizzle ORM's parameterized query builder — template literal interpolation into raw SQL is never used — though it is not yet wired into the composition root.
 
 ```typescript
 await db.select().from(users).where(eq(users.email, email.toString()));
@@ -140,7 +144,7 @@ await db.select().from(users).where(eq(users.email, email.toString()));
 - Passwords are never logged, never returned in API responses, and never stored in plain text
 - Tokens are never logged
 - Error responses to clients contain a message and an error code — never internal details, stack traces, or database errors
-- `LOG_LEVEL` must never be set to `trace` or `debug` in production (Pino would serialize request bodies)
+- The default Pino log level (`info`) must not be lowered to `debug` or `trace` in production — verbose levels would serialize request bodies
 
 ---
 

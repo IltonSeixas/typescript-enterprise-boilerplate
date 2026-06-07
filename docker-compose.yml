@@ -5,16 +5,12 @@ services:
       - "3000:3000"
       - "50051:50051"
     environment:
-      ADAPTER: postgres
-      DATABASE_URL: postgres://boilerplate:boilerplate@postgres:5432/boilerplate
+      NODE_ENV: production
       REDIS_URL: redis://redis:6379
       JWT_SECRET: dev-secret-change-in-production-min-32-chars
-      LOG_LEVEL: info
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
-      OTEL_SERVICE_NAME: typescript-enterprise-boilerplate
+      ALLOWED_ORIGINS: http://localhost:5173
+      OTLP_ENDPOINT: http://jaeger:4317
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     restart: unless-stopped
