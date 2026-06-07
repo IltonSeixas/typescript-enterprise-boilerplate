@@ -94,14 +94,9 @@ bun install && bun run dev
 
 The server starts on `http://localhost:3000`. No database required.
 
-### Run with PostgreSQL
+### Persistence adapter
 
-```bash
-cp .env.example .env
-# Edit .env: set DATABASE_URL, JWT_SECRET, etc.
-
-bun run dev -- --adapter=postgres
-```
+`main.ts` wires `UserRepository` to the in-memory implementation by default. A `PostgresUserRepository` skeleton lives in `src/infrastructure/persistence/postgres/` — swap the registration in the composition root (`container.register('UserRepository', ...)`) and provide a connection pool to switch adapters. There is currently no runtime `ADAPTER` switch; adapter selection is a compile-time wiring decision in `main.ts`, matching the Clean Architecture goal of keeping infrastructure choices at the edge.
 
 ---
 
@@ -144,6 +139,9 @@ The `PasswordHasher` interface in `domain/repositories/` abstracts the algorithm
 | `POST` | `/api/v1/auth/refresh` | Rotate refresh token |
 | `POST` | `/api/v1/auth/logout` | Revoke refresh token |
 | `GET` | `/api/v1/users/me` | Get authenticated user profile |
+| `PUT` | `/api/v1/users/me` | Update authenticated user profile |
+| `PUT` | `/api/v1/users/me/password` | Change authenticated user password |
+| `GET` | `/api/v1/users/:id` | Get a user by id |
 | `GET` | `/health` | Health check |
 | `GET` | `/metrics` | Prometheus metrics |
 
@@ -161,8 +159,8 @@ never diverge between transports.
 | `AuthService` | `RefreshToken` | `POST /api/v1/auth/refresh` |
 | `AuthService` | `Logout` | `POST /api/v1/auth/logout` |
 | `UserService` | `GetMe` | `GET /api/v1/users/me` |
-| `UserService` | `UpdateProfile` | — |
-| `UserService` | `ChangePassword` | — |
+| `UserService` | `UpdateProfile` | `PUT /api/v1/users/me` |
+| `UserService` | `ChangePassword` | `PUT /api/v1/users/me/password` |
 
 `UserService` RPCs require an `authorization: Bearer <access_token>` request metadata entry,
 validated by the same active-account check used by the REST authentication plugin. Since gRPC has
@@ -199,7 +197,7 @@ Start from the use case interface. Write a test that constructs the use case wit
 - **Logs**: structured JSON via Pino, correlated with trace IDs
 
 ```env
-OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+OTLP_ENDPOINT=http://localhost:4317
 ```
 
 ---
@@ -210,17 +208,16 @@ All configuration via environment variables, validated with Zod at startup (inva
 
 | Variable | Default | Description |
 |---|---|---|
+| `NODE_ENV` | `development` | Runtime environment (`development`, `production`, ...) |
 | `HOST` | `0.0.0.0` | Bind address |
 | `PORT` | `3000` | HTTP port |
 | `GRPC_PORT` | `50051` | gRPC port |
-| `DATABASE_URL` | — | PostgreSQL connection string |
-| `REDIS_URL` | — | Redis URL |
-| `JWT_SECRET` | — | HS256 signing key (min 32 chars) |
-| `JWT_ACCESS_TTL` | `900` | Access token TTL (seconds) |
-| `JWT_REFRESH_TTL` | `604800` | Refresh token TTL (seconds) |
-| `RATE_LIMIT_MAX` | `100` | Max requests per window per IP |
-| `LOG_LEVEL` | `info` | Pino log level |
-| `ADAPTER` | `memory` | Persistence adapter: `memory` or `postgres` |
+| `JWT_SECRET` | — | HS256 signing key (min 32 chars) — required, fails fast if missing |
+| `REDIS_URL` | `redis://localhost:6379` | Redis connection string (refresh token storage) |
+| `ALLOWED_ORIGINS` | — | Comma-separated CORS allow-list — empty disables cross-origin requests entirely |
+| `OTLP_ENDPOINT` | `http://localhost:4317` | OTLP gRPC endpoint for traces |
+
+Access/refresh token TTLs (900s / 604800s) and the global rate limit (100 requests per 60-second window per IP, via `@fastify/rate-limit`) are currently fixed in the composition root (`src/main.ts`) rather than environment-driven — adjust them there if your deployment needs different values.
 
 ---
 
