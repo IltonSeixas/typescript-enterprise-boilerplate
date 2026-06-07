@@ -70,9 +70,9 @@ infrastructure/ → application/ → domain/
 | Observability | `@opentelemetry/sdk-node` |
 | Structured logging | `pino` (built into Fastify) |
 | DI container | `tsyringe` |
-| Testing | `vitest` + `@vitest/coverage-v8` |
+| Testing | `bun:test` (built-in test runner) |
 | Linting | `eslint` + `@typescript-eslint` |
-| Runtime | `Node.js 22 LTS` or `Bun` |
+| Runtime | `Bun` |
 
 ---
 
@@ -80,7 +80,7 @@ infrastructure/ → application/ → domain/
 
 ### Prerequisites
 
-- Node.js 22 LTS or Bun 1.1+
+- Bun 1.1+
 - Optional for production: PostgreSQL 15+, Redis 7+
 
 ### Run immediately (in-memory, zero config)
@@ -89,10 +89,6 @@ infrastructure/ → application/ → domain/
 git clone https://github.com/your-org/typescript-enterprise-boilerplate
 cd typescript-enterprise-boilerplate
 
-# with npm
-npm install && npm run dev
-
-# with Bun
 bun install && bun run dev
 ```
 
@@ -104,7 +100,7 @@ The server starts on `http://localhost:3000`. No database required.
 cp .env.example .env
 # Edit .env: set DATABASE_URL, JWT_SECRET, etc.
 
-npm run dev -- --adapter=postgres
+bun run dev -- --adapter=postgres
 ```
 
 ---
@@ -153,26 +149,42 @@ The `PasswordHasher` interface in `domain/repositories/` abstracts the algorithm
 
 ### gRPC — `localhost:50051`
 
-Proto definitions in `proto/`. Regenerate TypeScript types with:
+Proto definitions live in `proto/boilerplate/v1/boilerplate.proto` and are loaded dynamically at
+runtime via `@grpc/proto-loader` — no code generation step required. The gRPC server runs
+alongside the REST API in the same process and reuses the exact same use cases, so business rules
+never diverge between transports.
 
-```bash
-npm run proto:gen
-```
+| Service | RPC | Mirrors REST endpoint |
+|---|---|---|
+| `AuthService` | `Register` | `POST /api/v1/auth/register` |
+| `AuthService` | `Login` | `POST /api/v1/auth/login` |
+| `AuthService` | `RefreshToken` | `POST /api/v1/auth/refresh` |
+| `AuthService` | `Logout` | `POST /api/v1/auth/logout` |
+| `UserService` | `GetMe` | `GET /api/v1/users/me` |
+| `UserService` | `UpdateProfile` | — |
+| `UserService` | `ChangePassword` | — |
+
+`UserService` RPCs require an `authorization: Bearer <access_token>` request metadata entry,
+validated by the same active-account check used by the REST authentication plugin. Since gRPC has
+no cookie mechanism, `Login` and `RefreshToken` return the refresh token in the response body
+instead of a `Set-Cookie` header — clients are responsible for storing it securely. Domain and
+application errors are translated to standard gRPC status codes (e.g. `NOT_FOUND`,
+`ALREADY_EXISTS`, `UNAUTHENTICATED`, `PERMISSION_DENIED`) by a dedicated error mapper.
 
 ---
 
 ## Testing
 
 ```bash
-npm run test              # unit tests (no external deps, uses in-memory adapter)
-npm run test:coverage     # coverage report
-npm run test:integration  # integration tests (requires Postgres + Redis)
+bun run test              # unit tests (no external deps, uses in-memory adapter)
+bun run test:coverage     # coverage report
+bun run test:integration  # integration tests (in-memory adapters, no external deps)
 ```
 
 ### Structure
 
-- **Unit tests**: co-located as `*.spec.ts`. Domain entities, value objects, and use cases tested in complete isolation. Repository mocks are TypeScript classes implementing the port interface — no mocking library needed for simple cases; `vitest`'s `vi.fn()` for complex scenarios.
-- **Integration tests**: `src/**/*.integration.spec.ts`. Run against real adapters using Testcontainers.
+- **Unit tests**: co-located as `*.spec.ts`. Domain entities, value objects, and use cases tested in complete isolation. Repository mocks are TypeScript classes implementing the port interface — no mocking library needed.
+- **Integration tests**: `src/**/*.integration.spec.ts`. Exercise the gRPC server end to end against in-memory adapters, using `bun:test` as the runner.
 
 ### TDD Approach
 
@@ -215,7 +227,7 @@ All configuration via environment variables, validated with Zod at startup (inva
 ## Docker
 
 ```bash
-# Multi-stage build — Node.js Alpine final image
+# Multi-stage build — Bun Alpine final image
 docker build -t typescript-enterprise-boilerplate .
 
 docker run -p 3000:3000 -p 50051:50051 --env-file .env typescript-enterprise-boilerplate
@@ -238,7 +250,7 @@ GitHub Actions pipelines in `.github/workflows/`:
 | `docker.yml` | push to `main` | build + push to GHCR |
 | `release.yml` | tag `v*` | build, create GitHub Release |
 
-`npm audit` runs on every push. `tsc --noEmit` enforces strict TypeScript — no `any`, no implicit returns.
+`bun audit` runs on every push. `tsc --noEmit` enforces strict TypeScript — no `any`, no implicit returns.
 
 ---
 

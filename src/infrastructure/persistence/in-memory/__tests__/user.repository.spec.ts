@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'bun:test';
 import { InMemoryUserRepository } from '../user.repository.js';
 import { OwnerAlreadyExistsError } from '../../../../domain/errors/domain.errors.js';
 import { User } from '../../../../domain/entities/user.entity.js';

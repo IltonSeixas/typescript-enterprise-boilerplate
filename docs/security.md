@@ -53,7 +53,7 @@ Timing-safe comparison is handled internally by the `argon2` library. `argon2.ve
 
 ### Refresh Token
 
-- Format: opaque UUID v4 via `crypto.randomUUID()` (Node.js built-in, no library)
+- Format: opaque UUID v4 via the `crypto.randomUUID()` Web Crypto global (built into the runtime, no library)
 - Storage: server-side in Redis with TTL 7 days
 - Transport: HttpOnly, Secure, SameSite=Strict cookie via `@fastify/cookie`
 - Rotation: a new refresh token is issued on every use; the old one is immediately invalidated
@@ -146,10 +146,10 @@ await db.select().from(users).where(eq(users.email, email.toString()));
 
 ## Dependency Auditing
 
-`npm audit` runs on every CI push.
+`bun audit` runs on every CI push.
 
 ```bash
-npm audit --audit-level=high
+bun audit
 ```
 
-Review `package-lock.json` (or `bun.lockb`) before deploying. Every transitive dependency is a potential attack surface. Use `npm audit fix` or pin affected versions when vulnerabilities are found.
+Review `bun.lock` before deploying. Every transitive dependency is a potential attack surface. Pin affected versions in `package.json` when vulnerabilities are found and run `bun install` to update the lockfile.

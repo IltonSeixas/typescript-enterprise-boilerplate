@@ -4,11 +4,11 @@ import {
   InvalidCredentialsError,
   UserNotFoundError,
 } from '../../domain/errors/domain.errors.js';
-import { UserRepository } from '../../domain/repositories/user.repository.js';
+import type { UserRepository } from '../../domain/repositories/user.repository.js';
 import { UserId } from '../../domain/value-objects/user-id.vo.js';
 import { PasswordHash } from '../../domain/value-objects/password-hash.vo.js';
 import { ChangePasswordDto } from '../dtos/change-password.dto.js';
-import { PasswordHasherPort } from '../ports/password-hasher.port.js';
+import type { PasswordHasherPort } from '../ports/password-hasher.port.js';
 
 @injectable()
 export class ChangePasswordUseCase {

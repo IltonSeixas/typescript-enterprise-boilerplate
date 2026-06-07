@@ -1,8 +1,8 @@
 import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { UserRepository } from '../../../domain/repositories/user.repository.js';
+import type { UserRepository } from '../../../domain/repositories/user.repository.js';
 import { UserId } from '../../../domain/value-objects/user-id.vo.js';
-import { TokenServicePort } from '../../../application/ports/token-service.port.js';
+import type { TokenServicePort } from '../../../application/ports/token-service.port.js';
 
 declare module 'fastify' {
   interface FastifyRequest {

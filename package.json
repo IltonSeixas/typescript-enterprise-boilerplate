@@ -7,17 +7,17 @@
   "type": "module",
   "main": "dist/main.js",
   "scripts": {
-    "dev": "tsx watch src/main.ts",
+    "dev": "bun --watch src/main.ts",
     "build": "tsc --project tsconfig.build.json",
-    "start": "node dist/main.js",
+    "start": "bun dist/main.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint 'src/**/*.ts'",
     "lint:fix": "eslint 'src/**/*.ts' --fix",
-    "test": "vitest run --reporter=verbose",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "test:integration": "vitest run --reporter=verbose --config vitest.integration.config.ts",
-    "test:all": "npm run test && npm run test:integration"
+    "test": "bun test --path-ignore-patterns '**/*.integration.spec.ts' src",
+    "test:watch": "bun test --watch --path-ignore-patterns '**/*.integration.spec.ts' src",
+    "test:coverage": "bun test --coverage --coverage-reporter=lcov --coverage-reporter=text --path-ignore-patterns '**/*.integration.spec.ts' src",
+    "test:integration": "bun test src/interfaces/grpc/server.integration.spec.ts",
+    "test:all": "bun run test && bun run test:integration"
   },
   "dependencies": {
     "@fastify/cookie": "^9.4.0",
@@ -53,10 +53,11 @@
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^7.15.0",
     "@typescript-eslint/parser": "^7.15.0",
-    "@vitest/coverage-v8": "^1.6.0",
     "eslint": "^8.57.0",
-    "tsx": "^4.16.2",
-    "typescript": "^5.5.3",
-    "vitest": "^1.6.0"
-  }
+    "pino-pretty": "^11.2.1",
+    "typescript": "^5.5.3"
+  },
+  "trustedDependencies": [
+    "protobufjs"
+  ]
 }

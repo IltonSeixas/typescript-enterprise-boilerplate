@@ -1,7 +1,7 @@
 import 'reflect-metadata';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'bun:test';
 import { GetUserUseCase } from '../get-user.use-case.js';
-import { UserRepository } from '../../../domain/repositories/user.repository.js';
+import type { UserRepository } from '../../../domain/repositories/user.repository.js';
 import {
   ForbiddenError,
   UserNotFoundError,

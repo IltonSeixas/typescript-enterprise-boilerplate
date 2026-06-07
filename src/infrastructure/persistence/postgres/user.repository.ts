@@ -4,7 +4,7 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { inject, injectable } from 'tsyringe';
 import { User, UserRole } from '../../../domain/entities/user.entity.js';
 import { OwnerAlreadyExistsError } from '../../../domain/errors/domain.errors.js';
-import { UserRepository } from '../../../domain/repositories/user.repository.js';
+import type { UserRepository } from '../../../domain/repositories/user.repository.js';
 import { Email } from '../../../domain/value-objects/email.vo.js';
 import { PasswordHash } from '../../../domain/value-objects/password-hash.vo.js';
 import { UserId } from '../../../domain/value-objects/user-id.vo.js';

@@ -1,7 +1,7 @@
 import 'reflect-metadata';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import { UpdateProfileUseCase } from '../update-profile.use-case.js';
-import { UserRepository } from '../../../domain/repositories/user.repository.js';
+import type { UserRepository } from '../../../domain/repositories/user.repository.js';
 import { UserNotFoundError } from '../../../domain/errors/domain.errors.js';
 import { User } from '../../../domain/entities/user.entity.js';
 import { Email } from '../../../domain/value-objects/email.vo.js';
