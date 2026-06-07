@@ -49,20 +49,27 @@ src/
 │   │   ├── register-user.use-case.ts
 │   │   ├── login-user.use-case.ts
 │   │   ├── refresh-token.use-case.ts
-│   │   └── logout-user.use-case.ts
+│   │   ├── logout-user.use-case.ts
+│   │   ├── get-user.use-case.ts
+│   │   ├── update-profile.use-case.ts
+│   │   └── change-password.use-case.ts
 │   ├── ports/
 │   │   ├── password-hasher.port.ts  # Interface: hash + verify
-│   │   └── token-issuer.port.ts     # Interface: issue + validate JWT
+│   │   └── token-service.port.ts    # Interface: sign/verify access tokens, issue/consume/revoke refresh tokens
 │   └── dtos/
 │       ├── register-user.dto.ts     # Zod schema + inferred type
+│       ├── login-user.dto.ts
+│       ├── change-password.dto.ts
+│       ├── update-profile.dto.ts
 │       └── auth-output.dto.ts
 │
 ├── infrastructure/
 │   ├── persistence/
 │   │   ├── in-memory/
-│   │   │   └── user.repository.ts
+│   │   │   └── user.repository.ts   # registered by default — the only adapter wired in main.ts
 │   │   └── postgres/
-│   │       └── user.repository.ts
+│   │       ├── schema.ts            # Drizzle table schema
+│   │       └── user.repository.ts   # implemented but not registered in the composition root
 │   ├── security/
 │   │   ├── argon2-hasher.ts
 │   │   └── jwt-service.ts
@@ -73,7 +80,6 @@ src/
 │
 ├── interfaces/
 │   ├── http/
-│   │   ├── server.ts
 │   │   ├── plugins/
 │   │   │   ├── auth.plugin.ts
 │   │   │   ├── rate-limit.plugin.ts
@@ -82,9 +88,13 @@ src/
 │   │       ├── auth.routes.ts
 │   │       └── user.routes.ts
 │   └── grpc/
-│       └── user.service.ts
+│       ├── server.ts
+│       ├── auth-service.grpc.ts
+│       ├── user-service.grpc.ts
+│       ├── grpc-auth.guard.ts
+│       └── grpc-error.mapper.ts
 │
-└── main.ts                          # Composition root
+└── main.ts                          # Composition root — builds the Fastify app, registers DI bindings, starts HTTP and gRPC servers
 ```
 
 ---
@@ -93,19 +103,22 @@ src/
 
 ### Entities
 
-`User` is the aggregate root. Construction goes through a static `create` factory method that returns `Result<User, DomainError>`. Fields are private; state is exposed through getters. The entity carries no framework decorators.
+`User` is the aggregate root. Construction goes through a static `create` factory method that returns `User` directly and throws a `DomainError` subclass on invalid input. Fields are private; state is exposed through getters. The entity carries no framework decorators.
 
 ### Value Objects
 
-Value objects are immutable classes with private constructors. `Email.create('bad')` returns `Err(new InvalidEmailError())`. Once constructed, the value is always valid.
+Value objects are immutable classes with private constructors. `Email.create('bad')` throws `InvalidEmailError`. Once constructed, the value is always valid.
 
 ```typescript
 export class Email {
   private constructor(private readonly value: string) {}
 
-  static create(raw: string): Result<Email, DomainError> {
-    // validation
-    return ok(new Email(raw));
+  static create(raw: string): Email {
+    const trimmed = raw.trim().toLowerCase();
+    if (!EMAIL_REGEX.test(trimmed) || trimmed.length > 254) {
+      throw new InvalidEmailError(raw);
+    }
+    return new Email(trimmed);
   }
 
   toString(): string {
@@ -118,8 +131,12 @@ export class Email {
 
 ```typescript
 export interface UserRepository {
+  findById(id: UserId): Promise<User | null>;
   findByEmail(email: Email): Promise<User | null>;
   save(user: User): Promise<void>;
+  update(user: User): Promise<void>;
+  saveFirstOwner(user: User): Promise<void>;
+  hasOwner(): Promise<boolean>;
 }
 ```
 
@@ -139,12 +156,13 @@ export class RegisterUserUseCase {
     @inject('PasswordHasher') private readonly hasher: PasswordHasherPort,
   ) {}
 
-  async execute(input: RegisterUserDto): Promise<void> {
+  async execute(input: RegisterUserDto): Promise<UserOutputDto> {
     // 1. parse + validate DTO (Zod)
     // 2. check uniqueness
     // 3. hash password
     // 4. construct entity
     // 5. persist
+    // 6. map to output DTO
   }
 }
 ```
@@ -161,18 +179,16 @@ The in-memory adapter uses a `Map<string, User>` and is production-equivalent fo
 
 ## Wiring (main.ts)
 
-`main.ts` is the composition root. It registers concrete implementations in the tsyringe container, then builds and starts the Fastify server.
+`main.ts` is the composition root. It registers concrete implementations in the tsyringe container, then builds and starts the Fastify and gRPC servers.
 
 ```typescript
-const adapter = process.env.ADAPTER ?? 'memory';
-
-if (adapter === 'postgres') {
-  container.register<UserRepository>('UserRepository', {
-    useClass: PostgresUserRepository,
-  });
-} else {
-  container.register<UserRepository>('UserRepository', {
-    useClass: InMemoryUserRepository,
-  });
-}
+container.registerSingleton('RedisStore', RedisStore);
+container.register('PasswordHasher', { useClass: Argon2Hasher });
+container.register('TokenService', { useClass: JwtService });
+container.register('UserRepository', { useClass: InMemoryUserRepository });
+container.register('JwtSecret', { useValue: JWT_SECRET });
+container.register('JwtAccessTtl', { useValue: 900 });
+container.register('JwtRefreshTtl', { useValue: 604800 });
 ```
+
+The in-memory adapter is the only `UserRepository` implementation registered today. `infrastructure/persistence/postgres/user.repository.ts` is fully implemented against the `UserRepository` port (backed by `drizzle-orm`), but wiring an environment-driven adapter switch into `main.ts` is left as a contribution opportunity.

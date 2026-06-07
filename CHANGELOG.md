@@ -12,12 +12,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Thi
 - Initial project structure: Clean Architecture + DDD layers
 - In-memory user repository adapter (zero-config default)
 - Argon2id password hashing via `argon2` npm package
-- JWT HS256 access token + opaque refresh token with Redis rotation
-- Fastify HTTP server with security plugins (rate-limit, helmet, cors)
-- gRPC server with `@grpc/grpc-js`
-- OpenTelemetry tracing, Prometheus metrics via `prom-client`, structured JSON logs via Pino
-- PostgreSQL adapter via Drizzle ORM
-- Zod-validated configuration at startup
+- JWT HS256 access token (returned in the response body, with a `jti` claim) + opaque UUID refresh token, rotated and stored server-side in Redis, delivered as an HttpOnly/Secure/SameSite=Strict cookie scoped to `/api/v1/auth`
+- Fastify HTTP server with security plugins (`@fastify/rate-limit`, `@fastify/helmet`, `@fastify/cors`, `@fastify/cookie`)
+- gRPC server with `@grpc/grpc-js`, mirroring the REST auth and user endpoints
+- OpenTelemetry distributed tracing via OTLP, structured logs via Pino
+- PostgreSQL adapter via Drizzle ORM (implemented against the `UserRepository` port, not yet wired into the composition root)
 - Docker multi-stage image (Bun-based) and docker-compose stack
 - GitHub Actions CI (typecheck, lint, test, bun audit), Docker, and Release workflows
 - Architecture documentation, ADRs, security policy

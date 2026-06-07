@@ -34,21 +34,28 @@ bun run test:all
 ```
 src/
 ├── domain/
-│   ├── value-objects/
-│   │   ├── email.vo.spec.ts          # value object tests
-│   │   └── password-hash.vo.spec.ts
-│   └── entities/
-│       └── user.entity.spec.ts       # entity invariant tests
+│   └── value-objects/
+│       └── __tests__/
+│           └── email.vo.spec.ts              # value object tests
 │
 ├── application/
 │   └── use-cases/
-│       ├── register-user.use-case.spec.ts   # use case tests with mock repos
-│       └── login-user.use-case.spec.ts
+│       └── __tests__/
+│           ├── register-user.use-case.spec.ts   # use case tests with hand-written port fakes
+│           ├── login-user.use-case.spec.ts
+│           ├── get-user.use-case.spec.ts
+│           ├── update-profile.use-case.spec.ts
+│           └── change-password.use-case.spec.ts
 │
-└── infrastructure/
-    └── persistence/
-        └── postgres/
-            └── user.repository.integration.spec.ts
+├── infrastructure/
+│   └── persistence/
+│       └── in-memory/
+│           └── __tests__/
+│               └── user.repository.spec.ts
+│
+└── interfaces/
+    └── grpc/
+        └── server.integration.spec.ts        # boots the real gRPC server end to end
 ```
 
 ---
@@ -61,55 +68,71 @@ Unit tests live in `*.spec.ts` files alongside the source. They cover:
 - Entity invariant enforcement
 - Use case business logic (success and failure paths)
 
-Repository and port dependencies are replaced with plain TypeScript class implementations of the port interfaces — or `vi.fn()` for simpler cases.
+Repository and port dependencies are replaced with plain object literals that implement the port interfaces — small factory functions (`makeUserRepo`, `makeHasher`) build them with sensible defaults that individual tests override per case. The suite uses Bun's built-in test runner (`bun:test`), not Vitest or Jest.
 
 ### Example — Value Object
 
 ```typescript
+import { describe, it, expect } from 'bun:test';
+
 describe('Email', () => {
   it('accepts a valid email address', () => {
-    const result = Email.create('user@example.com');
-    expect(result.isOk()).toBe(true);
+    const email = Email.create('user@example.com');
+    expect(email.toString()).toBe('user@example.com');
   });
 
-  it('rejects an address without an @ sign', () => {
-    const result = Email.create('notanemail');
-    expect(result.isErr()).toBe(true);
-    expect(result.error).toBeInstanceOf(InvalidEmailError);
+  it('rejects an email without @', () => {
+    expect(() => Email.create('invalidemail.com')).toThrow(InvalidEmailError);
+  });
+
+  it('normalises email to lowercase', () => {
+    const email = Email.create('User@Example.COM');
+    expect(email.toString()).toBe('user@example.com');
   });
 });
 ```
 
-### Example — Use Case with Mock Repository
+### Example — Use Case with a Hand-Written Repository Fake
 
 ```typescript
+import { describe, it, expect, beforeEach } from 'bun:test';
+
+const makeUserRepo = (overrides?: Partial<UserRepository>): UserRepository => ({
+  findById: async () => null,
+  findByEmail: async () => null,
+  save: async () => {},
+  update: async () => {},
+  saveFirstOwner: async () => {},
+  hasOwner: async () => false,
+  ...overrides,
+});
+
+const makeHasher = (): PasswordHasherPort => ({
+  hash: async (plain) => `hashed:${plain}`,
+  verify: async (hash, plain) => hash === `hashed:${plain}`,
+});
+
 describe('RegisterUserUseCase', () => {
-  let useCase: RegisterUserUseCase;
-  let userRepo: UserRepository;
   let hasher: PasswordHasherPort;
 
   beforeEach(() => {
-    userRepo = {
-      findByEmail: vi.fn().mockResolvedValue(null), // user does not exist
-      save: vi.fn().mockResolvedValue(undefined),
-    };
-    hasher = {
-      hash: vi.fn().mockResolvedValue('$argon2id$...'),
-      verify: vi.fn(),
-    };
-    useCase = new RegisterUserUseCase(userRepo, hasher);
+    hasher = makeHasher();
   });
 
-  it('saves a new user when the email is not taken', async () => {
-    await expect(useCase.execute(validInput())).resolves.not.toThrow();
-    expect(userRepo.save).toHaveBeenCalledOnce();
+  it('registers a member successfully', async () => {
+    const repo = makeUserRepo();
+    const useCase = new RegisterUserUseCase(repo, hasher);
+
+    const output = await useCase.execute(validInput());
+
+    expect(output.email).toBe('user@example.com');
   });
 
-  it('throws when the email is already registered', async () => {
-    vi.mocked(userRepo.findByEmail).mockResolvedValue(existingUser());
+  it('rejects registration when the email is already taken', async () => {
+    const repo = makeUserRepo({ findByEmail: async () => makeExistingUser() });
+    const useCase = new RegisterUserUseCase(repo, hasher);
 
     await expect(useCase.execute(validInput())).rejects.toThrow(EmailAlreadyExistsError);
-    expect(userRepo.save).not.toHaveBeenCalled();
   });
 });
 ```
