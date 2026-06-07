@@ -18,18 +18,25 @@ Every HTTP request is automatically instrumented via `@opentelemetry/instrumenta
 // infrastructure/telemetry/setup.ts
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
+import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
+import { FastifyInstrumentation } from '@opentelemetry/instrumentation-fastify';
 
-const sdk = new NodeSDK({
-  traceExporter: new OTLPTraceExporter({
-    url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
-  }),
-  instrumentations: [getNodeAutoInstrumentations()],
-});
+export function setupTelemetry(config: {
+  serviceName: string;
+  serviceVersion: string;
+  exporterEndpoint: string;
+}): NodeSDK {
+  const sdk = new NodeSDK({
+    traceExporter: new OTLPTraceExporter({ url: config.exporterEndpoint }),
+    instrumentations: [new HttpInstrumentation(), new FastifyInstrumentation()],
+  });
 
-sdk.start();
+  sdk.start();
+  return sdk;
+}
 ```
 
-This file must be `require`d before any other import — it is loaded via `--require` in the Node.js startup command.
+`setupTelemetry` is called at the very top of `main.ts`, before the dependency container and the Fastify instance are created, so every subsequent HTTP call and outgoing request is captured from the start.
 
 ### Manual spans in use cases
 

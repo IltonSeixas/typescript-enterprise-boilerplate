@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import { Email } from '../email.vo.js';
 import { InvalidEmailError } from '../../errors/domain.errors.js';
 

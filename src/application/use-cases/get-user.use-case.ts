@@ -4,7 +4,7 @@ import {
   ForbiddenError,
   UserNotFoundError,
 } from '../../domain/errors/domain.errors.js';
-import { UserRepository } from '../../domain/repositories/user.repository.js';
+import type { UserRepository } from '../../domain/repositories/user.repository.js';
 import { UserId } from '../../domain/value-objects/user-id.vo.js';
 import { UserOutputDto } from '../dtos/auth-output.dto.js';
 import { toUserOutput } from './register-user.use-case.js';

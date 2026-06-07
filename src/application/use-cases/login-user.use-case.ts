@@ -4,12 +4,12 @@ import {
   InvalidCredentialsError,
   UserInactiveError,
 } from '../../domain/errors/domain.errors.js';
-import { UserRepository } from '../../domain/repositories/user.repository.js';
+import type { UserRepository } from '../../domain/repositories/user.repository.js';
 import { Email } from '../../domain/value-objects/email.vo.js';
 import { AuthOutputDto } from '../dtos/auth-output.dto.js';
 import { LoginUserDto } from '../dtos/login-user.dto.js';
-import { PasswordHasherPort } from '../ports/password-hasher.port.js';
-import { TokenServicePort } from '../ports/token-service.port.js';
+import type { PasswordHasherPort } from '../ports/password-hasher.port.js';
+import type { TokenServicePort } from '../ports/token-service.port.js';
 
 @injectable()
 export class LoginUserUseCase {

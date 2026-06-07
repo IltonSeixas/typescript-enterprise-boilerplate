@@ -12,19 +12,19 @@ The in-memory adapter exists precisely to make the entire business logic testabl
 
 ```bash
 # Unit tests only (fast, no external deps)
-npm run test
+bun run test
 
 # Watch mode
-npm run test:watch
+bun run test:watch
 
 # Coverage report
-npm run test:coverage
+bun run test:coverage
 
-# Integration tests (requires PostgreSQL and Redis)
-npm run test:integration
+# Integration tests (in-memory adapters, no external deps)
+bun run test:integration
 
 # All tests
-npm run test:all
+bun run test:all
 ```
 
 ---
@@ -118,27 +118,32 @@ describe('RegisterUserUseCase', () => {
 
 ## Integration Tests
 
-Integration tests use the `.integration.spec.ts` suffix and run against real infrastructure via Testcontainers.
+Integration tests use the `.integration.spec.ts` suffix and exercise a real adapter end to end — for
+example, `interfaces/grpc/server.integration.spec.ts` boots the actual gRPC server wired with the
+in-memory repository and token service, then drives it through real `@grpc/grpc-js` clients. No
+external infrastructure (database, message broker, container runtime) is required.
 
 ```typescript
-describe('PostgresUserRepository (integration)', () => {
-  let container: StartedPostgreSqlContainer;
-  let repo: PostgresUserRepository;
+describe('gRPC server integration', () => {
+  let server: Server;
+  let clients: ReturnType<typeof loadClients>;
 
   beforeAll(async () => {
-    container = await new PostgreSqlContainer().start();
-    repo = new PostgresUserRepository(container.getConnectionUri());
-    await runMigrations(container.getConnectionUri());
+    const userRepository = new InMemoryUserRepository();
+    server = createGrpcServer({ /* use cases wired with in-memory adapters */ });
+
+    const port = await startGrpcServer(server, '127.0.0.1', 0);
+    clients = loadClients(port);
   });
 
-  afterAll(() => container.stop());
+  afterAll(() => stopGrpcServer(server));
 
-  it('saves and retrieves a user by email', async () => {
-    const user = UserFactory.create();
-    await repo.save(user);
+  it('registers, logs in and returns the authenticated profile via GetMe', async () => {
+    const registered = await call(clients.auth, 'register', { /* ... */ });
+    const session = await call(clients.auth, 'login', { /* ... */ });
+    const me = await call(clients.user, 'getMe', {}, bearerMetadata(session.accessToken));
 
-    const found = await repo.findByEmail(user.email);
-    expect(found?.id.toString()).toBe(user.id.toString());
+    expect(me.id).toBe(registered.id);
   });
 });
 ```
@@ -148,9 +153,9 @@ describe('PostgresUserRepository (integration)', () => {
 ## TDD Workflow
 
 1. Write a failing test that describes the expected behavior
-2. Run `npm run test` — confirm it fails for the right reason
+2. Run `bun run test` — confirm it fails for the right reason
 3. Write the minimum implementation to make it pass
-4. Run `npm run test` — confirm green
+4. Run `bun run test` — confirm green
 5. Refactor under green
 
 Never write implementation code without a failing test first.
@@ -166,4 +171,4 @@ Never write implementation code without a failing test first.
 | Infrastructure adapters | 80%+ |
 | HTTP handlers | 70%+ (covered by integration tests) |
 
-Coverage is enforced in CI via Vitest's `coverage.thresholds` configuration. Builds fail if coverage drops below the defined thresholds.
+Coverage reports are generated in CI via `bun test --coverage` and uploaded for review. Pull requests that drop coverage below these targets should be flagged in review.

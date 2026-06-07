@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { inject, injectable } from 'tsyringe';
-import { TokenServicePort } from '../ports/token-service.port.js';
+import type { TokenServicePort } from '../ports/token-service.port.js';
 
 @injectable()
 export class LogoutUserUseCase {

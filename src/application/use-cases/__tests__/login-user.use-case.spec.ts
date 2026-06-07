@@ -1,9 +1,9 @@
 import 'reflect-metadata';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'bun:test';
 import { LoginUserUseCase } from '../login-user.use-case.js';
-import { UserRepository } from '../../../domain/repositories/user.repository.js';
-import { PasswordHasherPort } from '../../ports/password-hasher.port.js';
-import { TokenServicePort, AccessTokenPayload } from '../../ports/token-service.port.js';
+import type { UserRepository } from '../../../domain/repositories/user.repository.js';
+import type { PasswordHasherPort } from '../../ports/password-hasher.port.js';
+import type { TokenServicePort, AccessTokenPayload } from '../../ports/token-service.port.js';
 import {
   InvalidCredentialsError,
   UserInactiveError,

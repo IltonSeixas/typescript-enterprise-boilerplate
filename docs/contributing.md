@@ -6,8 +6,7 @@ Contributions are welcome. Please read this document before opening a pull reque
 
 ## Prerequisites
 
-- Node.js 22 LTS or Bun 1.1+
-- Docker (for integration tests via Testcontainers)
+- Bun 1.1+
 
 ---
 
@@ -15,31 +14,25 @@ Contributions are welcome. Please read this document before opening a pull reque
 
 ```bash
 # Install dependencies
-npm install   # or: bun install
+bun install
 
 # Type checking
-npm run typecheck
+bun run typecheck
 
 # Lint
-npm run lint
-
-# Format check
-npm run format:check
-
-# Apply formatting
-npm run format
+bun run lint
 
 # Run unit tests
-npm run test
+bun run test
 
 # Run unit tests in watch mode
-npm run test:watch
+bun run test:watch
 
 # Security audit
-npm audit --audit-level=high
+bun audit
 
-# Run integration tests (requires Docker)
-npm run test:integration
+# Run integration tests (in-memory adapters, no external deps)
+bun run test:integration
 ```
 
 All of the above run automatically in CI on every pull request. A PR will not be merged if any of these steps fail.
@@ -57,7 +50,7 @@ All of the above run automatically in CI on every pull request. A PR will not be
 ### Style
 
 - TypeScript strict mode is enforced — no `any`, no `as unknown as X` escape hatches
-- `eslint` and `prettier` run in CI — format before committing
+- `eslint` runs in CI — lint before committing
 - No comments that explain *what* the code does — only *why* when non-obvious
 - Prefer `const` over `let`; never `var`
 
@@ -65,7 +58,7 @@ All of the above run automatically in CI on every pull request. A PR will not be
 
 - New behavior requires a test written first (TDD)
 - Mock repositories as plain TypeScript objects implementing the port interface — no mocking framework needed for simple cases
-- Integration tests must use Testcontainers and clean up via `afterAll`
+- Integration tests must drive real adapters end to end (e.g. boot the gRPC server against in-memory repositories) and clean up via `afterAll`
 
 ---
 

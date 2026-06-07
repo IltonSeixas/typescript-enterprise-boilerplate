@@ -5,11 +5,11 @@ import {
   EmailAlreadyExistsError,
   OwnerAlreadyExistsError,
 } from '../../domain/errors/domain.errors.js';
-import { UserRepository } from '../../domain/repositories/user.repository.js';
+import type { UserRepository } from '../../domain/repositories/user.repository.js';
 import { Email } from '../../domain/value-objects/email.vo.js';
 import { PasswordHash } from '../../domain/value-objects/password-hash.vo.js';
 import { RegisterUserDto } from '../dtos/register-user.dto.js';
-import { PasswordHasherPort } from '../ports/password-hasher.port.js';
+import type { PasswordHasherPort } from '../ports/password-hasher.port.js';
 import { UserOutputDto } from '../dtos/auth-output.dto.js';
 
 @injectable()

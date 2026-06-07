@@ -20,10 +20,12 @@ import { RefreshTokenUseCase } from './application/use-cases/refresh-token.use-c
 import { GetUserUseCase } from './application/use-cases/get-user.use-case.js';
 import { UpdateProfileUseCase } from './application/use-cases/update-profile.use-case.js';
 import { ChangePasswordUseCase } from './application/use-cases/change-password.use-case.js';
+import { createGrpcServer, startGrpcServer, stopGrpcServer } from './interfaces/grpc/server.js';
 
 const NODE_ENV = process.env['NODE_ENV'] ?? 'development';
 const HOST = process.env['HOST'] ?? '0.0.0.0';
 const PORT = parseInt(process.env['PORT'] ?? '3000', 10);
+const GRPC_PORT = parseInt(process.env['GRPC_PORT'] ?? '50051', 10);
 const JWT_SECRET = process.env['JWT_SECRET'];
 const REDIS_URL = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
 const OTLP_ENDPOINT = process.env['OTLP_ENDPOINT'] ?? 'http://localhost:4317';
@@ -118,9 +120,22 @@ app.setErrorHandler((err, _request, reply) => {
   });
 });
 
+const grpcServer = createGrpcServer({
+  registerUser,
+  loginUser,
+  refreshToken,
+  logoutUser,
+  getUser,
+  updateProfile,
+  changePassword,
+  tokenService,
+  userRepository,
+});
+
 const shutdown = async (): Promise<void> => {
   app.log.info('Shutting down...');
   await app.close();
+  await stopGrpcServer(grpcServer);
   await redisStore.disconnect();
   process.exit(0);
 };
@@ -129,6 +144,8 @@ process.on('SIGTERM', () => void shutdown());
 process.on('SIGINT', () => void shutdown());
 
 try {
+  const boundGrpcPort = await startGrpcServer(grpcServer, HOST, GRPC_PORT);
+  app.log.info(`gRPC server listening on ${HOST}:${boundGrpcPort}`);
   await app.listen({ host: HOST, port: PORT });
 } catch (err) {
   app.log.error(err);
