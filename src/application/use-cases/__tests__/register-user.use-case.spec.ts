@@ -3,10 +3,7 @@ import { describe, it, expect, beforeEach } from 'bun:test';
 import { RegisterUserUseCase } from '../register-user.use-case.js';
 import type { UserRepository } from '../../../domain/repositories/user.repository.js';
 import type { PasswordHasherPort } from '../../ports/password-hasher.port.js';
-import {
-  EmailAlreadyExistsError,
-  OwnerAlreadyExistsError,
-} from '../../../domain/errors/domain.errors.js';
+import { EmailAlreadyExistsError } from '../../../domain/errors/domain.errors.js';
 import { User } from '../../../domain/entities/user.entity.js';
 import { Email } from '../../../domain/value-objects/email.vo.js';
 import { PasswordHash } from '../../../domain/value-objects/password-hash.vo.js';
@@ -18,7 +15,7 @@ const makeUserRepo = (overrides?: Partial<UserRepository>): UserRepository => ({
   save: async () => {},
   update: async () => {},
   saveFirstOwner: async () => {},
-  hasOwner: async () => false,
+  hasOwner: async () => true,
   ...overrides,
 });
 
@@ -46,7 +43,7 @@ describe('RegisterUserUseCase', () => {
     hasher = makeHasher();
   });
 
-  it('registers a member successfully', async () => {
+  it('registers a member when an owner already exists', async () => {
     const repo = makeUserRepo();
     const useCase = new RegisterUserUseCase(repo, hasher);
 
@@ -78,25 +75,7 @@ describe('RegisterUserUseCase', () => {
     ).rejects.toBeInstanceOf(EmailAlreadyExistsError);
   });
 
-  it('throws OwnerAlreadyExistsError when trying to register a second owner', async () => {
-    const repo = makeUserRepo({
-      hasOwner: async () => true,
-    });
-    const useCase = new RegisterUserUseCase(repo, hasher);
-
-    await expect(
-      useCase.execute(
-        {
-          name: 'Second Owner',
-          email: 'owner2@example.com',
-          password: 'strongpassword123',
-        },
-        true,
-      ),
-    ).rejects.toBeInstanceOf(OwnerAlreadyExistsError);
-  });
-
-  it('registers owner successfully when no owner exists', async () => {
+  it('claims owner role when no owner exists', async () => {
     let savedUser: User | null = null;
     const repo = makeUserRepo({
       hasOwner: async () => false,
@@ -106,16 +85,33 @@ describe('RegisterUserUseCase', () => {
     });
     const useCase = new RegisterUserUseCase(repo, hasher);
 
-    const result = await useCase.execute(
-      {
-        name: 'Owner',
-        email: 'owner@example.com',
-        password: 'strongpassword123',
-      },
-      true,
-    );
+    const result = await useCase.execute({
+      name: 'First User',
+      email: 'owner@example.com',
+      password: 'strongpassword123',
+    });
 
     expect(result.role).toBe('owner');
     expect(savedUser).not.toBeNull();
+  });
+
+  it('registers as member when owner slot is taken', async () => {
+    let savedAsMember: User | null = null;
+    const repo = makeUserRepo({
+      hasOwner: async () => true,
+      save: async (user: User) => {
+        savedAsMember = user;
+      },
+    });
+    const useCase = new RegisterUserUseCase(repo, hasher);
+
+    const result = await useCase.execute({
+      name: 'Second User',
+      email: 'member@example.com',
+      password: 'strongpassword123',
+    });
+
+    expect(result.role).toBe('member');
+    expect(savedAsMember).not.toBeNull();
   });
 });

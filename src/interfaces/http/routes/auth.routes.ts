@@ -20,6 +20,8 @@ import {
 
 const COOKIE_NAME = 'refresh_token';
 
+const AUTH_RATE_LIMIT = { max: 10, timeWindow: 60000 };
+
 interface AuthRoutesOpts {
   registerUser: RegisterUserUseCase;
   loginUser: LoginUserUseCase;
@@ -33,7 +35,7 @@ export async function authRoutes(
 ): Promise<void> {
   app.post(
     '/register',
-    { config: { public: true } },
+    { config: { public: true, rateLimit: AUTH_RATE_LIMIT } },
     async (request, reply) => {
       const parsed = RegisterUserSchema.safeParse(request.body);
       if (!parsed.success) {
@@ -47,6 +49,9 @@ export async function authRoutes(
         if (err instanceof EmailAlreadyExistsError) {
           return reply.status(409).send(domainError(err));
         }
+        if (err instanceof OwnerAlreadyExistsError) {
+          return reply.status(409).send(domainError(err));
+        }
         throw err;
       }
     },
@@ -54,7 +59,7 @@ export async function authRoutes(
 
   app.post(
     '/login',
-    { config: { public: true } },
+    { config: { public: true, rateLimit: AUTH_RATE_LIMIT } },
     async (request, reply) => {
       const parsed = LoginUserSchema.safeParse(request.body);
       if (!parsed.success) {
@@ -88,7 +93,7 @@ export async function authRoutes(
 
   app.post(
     '/refresh',
-    { config: { public: true } },
+    { config: { public: true, rateLimit: AUTH_RATE_LIMIT } },
     async (request, reply) => {
       const token = request.cookies[COOKIE_NAME];
       if (!token) {
