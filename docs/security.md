@@ -70,10 +70,11 @@ Access tokens cannot be revoked before expiry (stateless by design). The 15-minu
 Implemented via `@fastify/rate-limit` with fixed in-process limits — not Redis-backed and not environment-configurable.
 
 ```
-Global: 100 requests / 60 seconds per IP (registered in main.ts)
+Global:        100 requests / 60 seconds per IP (registered in main.ts)
+Auth routes:    10 requests / 60 seconds per IP (per-route config on /register, /login, /refresh)
 ```
 
-There is no separate, stricter limit on authentication routes; the global limit applies uniformly.
+Authentication routes carry a stricter per-route limit via `config: { rateLimit: { max: 10, timeWindow: 60000 } }` passed directly to each `app.post()` declaration in `auth.routes.ts`. `@fastify/rate-limit` picks up this config and applies it independently from the global limit.
 
 On limit exceeded, the server returns `429 Too Many Requests` with a structured JSON error body.
 

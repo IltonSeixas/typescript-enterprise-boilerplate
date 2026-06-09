@@ -1,10 +1,7 @@
 import 'reflect-metadata';
 import { inject, injectable } from 'tsyringe';
 import { User } from '../../domain/entities/user.entity.js';
-import {
-  EmailAlreadyExistsError,
-  OwnerAlreadyExistsError,
-} from '../../domain/errors/domain.errors.js';
+import { EmailAlreadyExistsError } from '../../domain/errors/domain.errors.js';
 import type { UserRepository } from '../../domain/repositories/user.repository.js';
 import { Email } from '../../domain/value-objects/email.vo.js';
 import { PasswordHash } from '../../domain/value-objects/password-hash.vo.js';
@@ -19,32 +16,25 @@ export class RegisterUserUseCase {
     @inject('PasswordHasher') private readonly hasher: PasswordHasherPort,
   ) {}
 
-  async execute(
-    input: RegisterUserDto,
-    asOwner = false,
-  ): Promise<UserOutputDto> {
+  async execute(input: RegisterUserDto): Promise<UserOutputDto> {
     const email = Email.create(input.email);
     const existing = await this.users.findByEmail(email);
     if (existing !== null) {
       throw new EmailAlreadyExistsError(email.toString());
     }
 
-    if (asOwner) {
-      const ownerExists = await this.users.hasOwner();
-      if (ownerExists) {
-        throw new OwnerAlreadyExistsError();
-      }
-    }
+    const ownerExists = await this.users.hasOwner();
+    const role = ownerExists ? 'member' : 'owner';
 
     const hash = await this.hasher.hash(input.password);
     const user = User.create({
       name: input.name,
       email,
       passwordHash: PasswordHash.fromHash(hash),
-      role: asOwner ? 'owner' : 'member',
+      role,
     });
 
-    if (asOwner) {
+    if (role === 'owner') {
       await this.users.saveFirstOwner(user);
     } else {
       await this.users.save(user);
