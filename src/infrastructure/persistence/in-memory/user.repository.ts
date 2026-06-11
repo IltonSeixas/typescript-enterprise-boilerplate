@@ -11,25 +11,27 @@ export class InMemoryUserRepository implements UserRepository {
   private readonly store = new Map<string, User>();
   private ownerLock = false;
 
-  async findById(id: UserId): Promise<User | null> {
-    return this.store.get(id.toString()) ?? null;
+  findById(id: UserId): Promise<User | null> {
+    return Promise.resolve(this.store.get(id.toString()) ?? null);
   }
 
-  async findByEmail(email: Email): Promise<User | null> {
+  findByEmail(email: Email): Promise<User | null> {
     for (const user of this.store.values()) {
       if (user.email.equals(email)) {
-        return user;
+        return Promise.resolve(user);
       }
     }
-    return null;
+    return Promise.resolve(null);
   }
 
-  async save(user: User): Promise<void> {
+  save(user: User): Promise<void> {
     this.store.set(user.id.toString(), user);
+    return Promise.resolve();
   }
 
-  async update(user: User): Promise<void> {
+  update(user: User): Promise<void> {
     this.store.set(user.id.toString(), user);
+    return Promise.resolve();
   }
 
   async saveFirstOwner(user: User): Promise<void> {
@@ -40,13 +42,13 @@ export class InMemoryUserRepository implements UserRepository {
     this.store.set(user.id.toString(), user);
   }
 
-  async hasOwner(): Promise<boolean> {
+  hasOwner(): Promise<boolean> {
     for (const user of this.store.values()) {
       if (user.role === 'owner') {
-        return true;
+        return Promise.resolve(true);
       }
     }
-    return false;
+    return Promise.resolve(false);
   }
 
   clear(): void {

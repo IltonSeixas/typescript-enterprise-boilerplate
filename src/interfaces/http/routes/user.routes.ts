@@ -24,10 +24,7 @@ interface UserRoutesOpts {
   changePassword: ChangePasswordUseCase;
 }
 
-export async function userRoutes(
-  app: FastifyInstance,
-  opts: UserRoutesOpts,
-): Promise<void> {
+export function userRoutes(app: FastifyInstance, opts: UserRoutesOpts): void {
   app.get('/me', async (request, reply) => {
     const requesterId = request.auth.id;
 
