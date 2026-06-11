@@ -1,5 +1,3 @@
-> **Work in progress** — this project is under active development and is not yet production-ready.
-
 # typescript-enterprise-boilerplate
 
 [![CI](https://github.com/IltonSeixas/typescript-enterprise-boilerplate/actions/workflows/ci.yml/badge.svg)](https://github.com/IltonSeixas/typescript-enterprise-boilerplate/actions/workflows/ci.yml)
@@ -66,7 +64,7 @@ infrastructure/ → application/ → domain/
 | gRPC | `@grpc/grpc-js` + `@grpc/proto-loader` |
 | Database (production) | `drizzle-orm` + `postgres` |
 | Password hashing | `argon2` (native bindings) |
-| JWT | `@fastify/jwt` |
+| JWT | `jsonwebtoken` |
 | Observability | `@opentelemetry/sdk-node` |
 | Structured logging | `pino` (built into Fastify) |
 | DI container | `tsyringe` |
@@ -96,7 +94,7 @@ The server starts on `http://localhost:3000`. No database required.
 
 ### Persistence adapter
 
-`main.ts` wires `UserRepository` to the in-memory implementation by default. A `PostgresUserRepository` skeleton lives in `src/infrastructure/persistence/postgres/` — swap the registration in the composition root (`container.register('UserRepository', ...)`) and provide a connection pool to switch adapters. There is currently no runtime `ADAPTER` switch; adapter selection is a compile-time wiring decision in `main.ts`, matching the Clean Architecture goal of keeping infrastructure choices at the edge.
+`main.ts` wires `UserRepository` to the in-memory implementation by default. Setting `DATABASE_URL` switches the composition root to `PostgresUserRepository` (`src/infrastructure/persistence/postgres/`), running pending migrations from `migrations/` via `drizzle-orm/postgres-js/migrator` on startup. Schema changes are managed with `drizzle-kit` (`bunx drizzle-kit generate`).
 
 ---
 
@@ -142,7 +140,8 @@ The `PasswordHasher` interface in `domain/repositories/` abstracts the algorithm
 | `PUT` | `/api/v1/users/me` | Update authenticated user profile |
 | `PUT` | `/api/v1/users/me/password` | Change authenticated user password |
 | `GET` | `/api/v1/users/:id` | Get a user by id |
-| `GET` | `/health` | Health check |
+| `GET` | `/health` | Liveness check |
+| `GET` | `/ready` | Readiness check (Redis, Postgres if configured) |
 | `GET` | `/metrics` | Prometheus metrics |
 
 ### gRPC — `localhost:50051`

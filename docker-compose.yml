@@ -6,12 +6,15 @@ services:
       - "50051:50051"
     environment:
       NODE_ENV: production
+      DATABASE_URL: postgres://boilerplate:boilerplate@postgres:5432/boilerplate
       REDIS_URL: redis://redis:6379
       JWT_SECRET: dev-secret-change-in-production-min-32-chars
       ALLOWED_ORIGINS: http://localhost:5173
       OTLP_ENDPOINT: http://jaeger:4317
     depends_on:
       redis:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     restart: unless-stopped
 
