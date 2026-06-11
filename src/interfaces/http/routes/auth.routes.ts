@@ -29,10 +29,7 @@ interface AuthRoutesOpts {
   logoutUser: LogoutUserUseCase;
 }
 
-export async function authRoutes(
-  app: FastifyInstance,
-  opts: AuthRoutesOpts,
-): Promise<void> {
+export function authRoutes(app: FastifyInstance, opts: AuthRoutesOpts): void {
   app.post(
     '/register',
     { config: { public: true, rateLimit: AUTH_RATE_LIMIT } },

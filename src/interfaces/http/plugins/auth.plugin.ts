@@ -18,8 +18,8 @@ interface AuthPluginOptions {
 }
 
 export const authPlugin = fp(
-  async (app: FastifyInstance, opts: AuthPluginOptions) => {
-    app.decorateRequest('auth', null);
+  (app: FastifyInstance, opts: AuthPluginOptions) => {
+    app.decorateRequest('auth', null, []);
 
     app.addHook('preHandler', async (request: FastifyRequest, reply) => {
       const routeConfig = request.routeOptions.config as unknown as Record<string, unknown> | undefined;
