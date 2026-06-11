@@ -29,6 +29,10 @@ export class RedisStore {
     await this.client.connect();
   }
 
+  async ping(): Promise<void> {
+    await this.client.ping();
+  }
+
   async disconnect(): Promise<void> {
     await this.client.quit();
   }
