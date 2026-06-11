@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { eq } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { inject, injectable } from 'tsyringe';
 import { User, UserRole } from '../../../domain/entities/user.entity.js';
 import { OwnerAlreadyExistsError } from '../../../domain/errors/domain.errors.js';
@@ -13,7 +13,7 @@ import { InsertUserRow, UserRow, users } from './schema.js';
 @injectable()
 export class PostgresUserRepository implements UserRepository {
   constructor(
-    @inject('Database') private readonly db: NodePgDatabase,
+    @inject('Database') private readonly db: PostgresJsDatabase,
   ) {}
 
   async findById(id: UserId): Promise<User | null> {
