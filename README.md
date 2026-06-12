@@ -78,7 +78,7 @@ infrastructure/ → application/ → domain/
 
 ### Prerequisites
 
-- Bun 1.1+
+- Bun 1.3+
 - Optional for production: PostgreSQL 15+, Redis 7+
 
 ### Run immediately (in-memory, zero config)
