@@ -103,7 +103,7 @@ function call<Req, Res>(
       metadata,
       (err, res) => {
         if (err) {
-          reject(err);
+          reject(err instanceof Error ? err : new Error('gRPC call failed', { cause: err }));
           return;
         }
         resolve(res);
