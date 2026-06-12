@@ -16,6 +16,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Thi
 - Fastify HTTP server with security plugins (`@fastify/rate-limit`, `@fastify/helmet`, `@fastify/cors`, `@fastify/cookie`)
 - gRPC server with `@grpc/grpc-js`, mirroring the REST auth and user endpoints
 - OpenTelemetry distributed tracing via OTLP, structured logs via Pino
+- Prometheus metrics endpoint (`/metrics`) via `prom-client`, with health and readiness checks (`/health`, `/ready`)
 - PostgreSQL adapter via Drizzle ORM (implemented against the `UserRepository` port, not yet wired into the composition root)
 - Docker multi-stage image (Bun-based) and docker-compose stack
 - GitHub Actions CI (typecheck, lint, test, bun audit), Docker, and Release workflows
