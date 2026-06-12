@@ -4,7 +4,7 @@
 
 Distributed tracing is built into the boilerplate from the start using **OpenTelemetry** — the vendor-neutral standard. You can export to any compatible backend (Jaeger, Grafana Tempo, Honeycomb, Datadog, AWS X-Ray) by pointing `OTLP_ENDPOINT` at it.
 
-This boilerplate ships traces and structured logs. It does not currently expose a Prometheus metrics endpoint — see [Metrics](#metrics) below.
+This boilerplate ships traces, structured logs, and Prometheus metrics out of the box — see [Metrics](#metrics) below.
 
 ---
 
@@ -18,8 +18,8 @@ Every HTTP request is automatically instrumented via `@opentelemetry/instrumenta
 // infrastructure/telemetry/setup.ts
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
-import { Resource } from '@opentelemetry/resources';
-import { SEMRESATTRS_SERVICE_NAME, SEMRESATTRS_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
+import { resourceFromAttributes } from '@opentelemetry/resources';
+import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
 import { FastifyInstrumentation } from '@opentelemetry/instrumentation-fastify';
 
@@ -29,9 +29,9 @@ export function setupTelemetry(config: {
   exporterEndpoint: string;
 }): NodeSDK {
   const sdk = new NodeSDK({
-    resource: new Resource({
-      [SEMRESATTRS_SERVICE_NAME]: config.serviceName,
-      [SEMRESATTRS_SERVICE_VERSION]: config.serviceVersion,
+    resource: resourceFromAttributes({
+      [ATTR_SERVICE_NAME]: config.serviceName,
+      [ATTR_SERVICE_VERSION]: config.serviceVersion,
     }),
     traceExporter: new OTLPTraceExporter({ url: config.exporterEndpoint }),
     instrumentations: [new HttpInstrumentation(), new FastifyInstrumentation()],
@@ -48,9 +48,9 @@ export function setupTelemetry(config: {
 
 ## Metrics
 
-This boilerplate does not currently expose a Prometheus metrics endpoint or instrument custom application metrics — only distributed traces and logs are shipped out of the box. Adding a `/metrics` route backed by `prom-client` (or the OpenTelemetry metrics SDK) is a natural extension point.
+`GET /metrics` exposes default Node.js process and runtime metrics (CPU, memory, event loop, GC) via `prom-client`'s `collectDefaultMetrics`, registered in `metricsRoutes`. Custom application metrics are not yet instrumented — the route is wired and ready to register additional counters/histograms as needed.
 
-The `prometheus` and `grafana` services in `docker-compose.yml` are provided as a starting point for teams that add metrics instrumentation; they are not pre-wired to scrape this service.
+The `prometheus` and `grafana` services in `docker-compose.yml` are pre-configured to scrape this endpoint — see `docker/prometheus.yml` (`metrics_path: /metrics`, target `app:3000`) and the provisioned Grafana datasource.
 
 ---
 
@@ -81,4 +81,4 @@ Start the observability stack defined in `docker-compose.yml`:
 docker compose up jaeger prometheus grafana
 ```
 
-Open `http://localhost:16686` to browse traces in Jaeger. The `OTEL_EXPORTER_OTLP_ENDPOINT` value baked into the compose file points the application at the bundled Jaeger instance.
+Open `http://localhost:16686` to browse traces in Jaeger. The `OTLP_ENDPOINT` value baked into the compose file points the application at the bundled Jaeger instance.
