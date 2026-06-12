@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { inject, injectable } from 'tsyringe';
-import { User, UserRole } from '../../../domain/entities/user.entity.js';
+import { User } from '../../../domain/entities/user.entity.js';
 import { OwnerAlreadyExistsError } from '../../../domain/errors/domain.errors.js';
 import type { UserRepository } from '../../../domain/repositories/user.repository.js';
 import { Email } from '../../../domain/value-objects/email.vo.js';
@@ -79,7 +79,7 @@ export class PostgresUserRepository implements UserRepository {
       name: row.name,
       email: Email.create(row.email),
       passwordHash: PasswordHash.fromHash(row.passwordHash),
-      role: row.role as UserRole,
+      role: row.role,
       isActive: row.isActive,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
