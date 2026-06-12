@@ -13,17 +13,22 @@ import {
   UserNotFoundError,
 } from '../../domain/errors/domain.errors.js';
 
-export interface GrpcError {
-  code: status;
-  message: string;
+export class GrpcError extends Error {
+  constructor(
+    public readonly code: status,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'GrpcError';
+  }
 }
 
 export function toGrpcError(err: unknown): GrpcError {
   if (err instanceof DomainError) {
-    return { code: codeFor(err), message: err.message };
+    return new GrpcError(codeFor(err), err.message);
   }
 
-  return { code: status.INTERNAL, message: 'An unexpected error occurred' };
+  return new GrpcError(status.INTERNAL, 'An unexpected error occurred');
 }
 
 function codeFor(err: DomainError): status {
