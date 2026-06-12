@@ -2,7 +2,7 @@ import { status, type ServerUnaryCall } from '@grpc/grpc-js';
 import type { UserRepository } from '../../domain/repositories/user.repository.js';
 import { UserId } from '../../domain/value-objects/user-id.vo.js';
 import type { AccessTokenPayload, TokenServicePort } from '../../application/ports/token-service.port.js';
-import type { GrpcError } from './grpc-error.mapper.js';
+import { GrpcError } from './grpc-error.mapper.js';
 
 export interface AuthenticatedCaller {
   id: string;
@@ -41,5 +41,5 @@ export async function authenticateCall(
 }
 
 function grpcError(code: status, message: string): GrpcError {
-  return { code, message };
+  return new GrpcError(code, message);
 }

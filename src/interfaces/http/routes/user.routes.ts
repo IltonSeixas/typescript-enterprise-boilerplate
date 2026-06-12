@@ -102,7 +102,7 @@ function formatZodError(err: ZodError): object {
     statusCode: 400,
     error: 'Bad Request',
     message: 'Validation failed',
-    details: err.errors.map((e) => ({
+    details: err.issues.map((e) => ({
       path: e.path.join('.'),
       message: e.message,
     })),

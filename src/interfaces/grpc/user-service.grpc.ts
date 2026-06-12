@@ -10,7 +10,7 @@ import type { UserRepository } from '../../domain/repositories/user.repository.j
 import { authenticateCall } from './grpc-auth.guard.js';
 import { toGrpcError } from './grpc-error.mapper.js';
 
-interface GetMeRequest {}
+type GetMeRequest = Record<string, never>;
 
 interface UpdateProfileRequest {
   name: string;
