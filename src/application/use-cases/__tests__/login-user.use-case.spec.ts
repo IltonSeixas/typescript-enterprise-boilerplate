@@ -24,8 +24,8 @@ const makeUserRepo = (overrides?: Partial<UserRepository>): UserRepository => ({
 });
 
 const makeHasher = (): PasswordHasherPort => ({
-  hash: async (plain: string) => `hashed:${plain}`,
-  verify: async (hash: string, plain: string) => hash === `hashed:${plain}`,
+  hash: async (plain: string) => `$argon2id$${plain}`,
+  verify: async (hash: string, plain: string) => hash === `$argon2id$${plain}`,
 });
 
 const makeTokenService = (): TokenServicePort => ({
@@ -41,7 +41,7 @@ const makeActiveUser = (overrides?: Partial<{ isActive: boolean }>): User =>
     id: UserId.create('00000000-0000-0000-0000-000000000001'),
     name: 'Alice',
     email: Email.create('alice@example.com'),
-    passwordHash: PasswordHash.fromHash('hashed:correctpassword'),
+    passwordHash: PasswordHash.fromHash('$argon2id$correctpassword'),
     role: 'member',
     isActive: overrides?.isActive ?? true,
     createdAt: new Date(),

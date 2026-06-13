@@ -87,3 +87,19 @@ export class OwnerAlreadyExistsError extends DomainError {
     super('An owner account already exists');
   }
 }
+
+export class InsufficientPermissionsError extends DomainError {
+  readonly code = 'INSUFFICIENT_PERMISSIONS';
+
+  constructor() {
+    super('Insufficient permissions to perform this action');
+  }
+}
+
+export class InvalidRoleError extends DomainError {
+  readonly code = 'INVALID_ROLE';
+
+  constructor(raw: string) {
+    super(`Invalid role: ${raw}`);
+  }
+}

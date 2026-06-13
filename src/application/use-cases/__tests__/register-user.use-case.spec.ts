@@ -20,8 +20,8 @@ const makeUserRepo = (overrides?: Partial<UserRepository>): UserRepository => ({
 });
 
 const makeHasher = (): PasswordHasherPort => ({
-  hash: async (plain: string) => `hashed:${plain}`,
-  verify: async (hash: string, plain: string) => hash === `hashed:${plain}`,
+  hash: async (plain: string) => `$argon2id$${plain}`,
+  verify: async (hash: string, plain: string) => hash === `$argon2id$${plain}`,
 });
 
 const makeExistingUser = (): User =>
@@ -29,7 +29,7 @@ const makeExistingUser = (): User =>
     id: UserId.create('00000000-0000-0000-0000-000000000001'),
     name: 'Existing User',
     email: Email.create('existing@example.com'),
-    passwordHash: PasswordHash.fromHash('hashed:password'),
+    passwordHash: PasswordHash.fromHash('$argon2id$password'),
     role: 'member',
     isActive: true,
     createdAt: new Date(),
