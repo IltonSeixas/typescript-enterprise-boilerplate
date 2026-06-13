@@ -2,11 +2,14 @@ import type { sendUnaryData, ServerUnaryCall, UntypedHandleCall } from '@grpc/gr
 import { GetUserUseCase } from '../../application/use-cases/get-user.use-case.js';
 import { UpdateProfileUseCase } from '../../application/use-cases/update-profile.use-case.js';
 import { ChangePasswordUseCase } from '../../application/use-cases/change-password.use-case.js';
+import { ChangeRoleUseCase } from '../../application/use-cases/change-role.use-case.js';
 import { UpdateProfileSchema } from '../../application/dtos/update-profile.dto.js';
 import { ChangePasswordSchema } from '../../application/dtos/change-password.dto.js';
+import { ChangeRoleSchema } from '../../application/dtos/change-role.dto.js';
 import type { UserOutputDto } from '../../application/dtos/auth-output.dto.js';
 import type { TokenServicePort } from '../../application/ports/token-service.port.js';
 import type { UserRepository } from '../../domain/repositories/user.repository.js';
+import { InvalidRoleError } from '../../domain/errors/domain.errors.js';
 import { authenticateCall } from './grpc-auth.guard.js';
 import { toGrpcError } from './grpc-error.mapper.js';
 
@@ -21,11 +24,17 @@ interface ChangePasswordRequest {
   newPassword: string;
 }
 
+interface ChangeRoleRequest {
+  userId: string;
+  role: string;
+}
+
 export class UserServiceGrpc {
   constructor(
     private readonly getUser: GetUserUseCase,
     private readonly updateProfile: UpdateProfileUseCase,
     private readonly changePassword: ChangePasswordUseCase,
+    private readonly changeRole: ChangeRoleUseCase,
     private readonly tokenService: TokenServicePort,
     private readonly userRepository: UserRepository,
   ) {}
@@ -60,6 +69,19 @@ export class UserServiceGrpc {
       });
       await this.changePassword.execute(callerId, input);
       return {};
+    });
+  };
+
+  changeRoleHandler = (
+    call: ServerUnaryCall<ChangeRoleRequest, UserOutputDto>,
+    callback: sendUnaryData<UserOutputDto>,
+  ): void => {
+    void this.handle(call, callback, async (request, callerId) => {
+      const parsed = ChangeRoleSchema.safeParse({ role: request.role });
+      if (!parsed.success) {
+        throw new InvalidRoleError(request.role);
+      }
+      return this.changeRole.execute(callerId, request.userId, parsed.data);
     });
   };
 
@@ -98,5 +120,6 @@ export function bindUserService(service: UserServiceGrpc): Record<string, Untype
     getMe: service.getMe,
     updateProfile: service.updateProfileHandler,
     changePassword: service.changePasswordHandler,
+    changeRole: service.changeRoleHandler,
   };
 }
