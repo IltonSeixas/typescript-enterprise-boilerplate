@@ -93,6 +93,20 @@ describe('GetUserUseCase', () => {
     ).rejects.toBeInstanceOf(ForbiddenError);
   });
 
+  it('requisitante inexistente não pode buscar outro usuário — lança ForbiddenError', async () => {
+    const repo = makeUserRepo({
+      findById: async (id) => {
+        if (id.toString() === MEMBER_A_ID) return memberA;
+        return null;
+      },
+    });
+    const useCase = new GetUserUseCase(repo);
+
+    await expect(
+      useCase.execute(MEMBER_B_ID, MEMBER_A_ID),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
   it('lança UserNotFoundError para ID inexistente', async () => {
     const repo = makeUserRepo({
       findById: async (id) => {
