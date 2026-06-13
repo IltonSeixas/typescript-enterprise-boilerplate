@@ -18,7 +18,7 @@ export class GetUserUseCase {
   async execute(requesterId: string, targetId: string): Promise<UserOutputDto> {
     if (requesterId !== targetId) {
       const requester = await this.users.findById(UserId.create(requesterId));
-      if (requester === null || !requester.canManageRoles()) {
+      if (requester === null || !requester.canViewOtherProfiles()) {
         throw new ForbiddenError();
       }
     }

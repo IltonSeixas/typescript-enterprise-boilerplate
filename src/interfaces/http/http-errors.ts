@@ -14,7 +14,6 @@ export function formatZodError(err: ZodError): object {
 
 export function domainError(err: { code: string; message: string }): object {
   return {
-    statusCode: undefined,
     error: err.code,
     message: err.message,
   };
