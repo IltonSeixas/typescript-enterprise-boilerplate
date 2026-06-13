@@ -74,6 +74,18 @@ describe('ChangeRoleUseCase', () => {
     ).rejects.toBeInstanceOf(InsufficientPermissionsError);
   });
 
+  it('lança InsufficientPermissionsError quando o ator tenta alterar o próprio papel', async () => {
+    const owner = userWithRole(ACTOR_ID, 'owner@example.com', 'owner');
+    const repo = makeUserRepo({
+      findById: async (id) => (id.toString() === ACTOR_ID ? owner : null),
+    });
+    const useCase = new ChangeRoleUseCase(repo);
+
+    await expect(
+      useCase.execute(ACTOR_ID, ACTOR_ID, { role: 'admin' }),
+    ).rejects.toBeInstanceOf(InsufficientPermissionsError);
+  });
+
   it('owner promove member para admin e persiste a alteração', async () => {
     const actor = userWithRole(ACTOR_ID, 'owner@example.com', 'owner');
     const target = userWithRole(TARGET_ID, 'target@example.com', 'member');
