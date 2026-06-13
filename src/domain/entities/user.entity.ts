@@ -104,7 +104,7 @@ export class User {
     });
   }
 
-  canManageRoles(): boolean {
+  canViewOtherProfiles(): boolean {
     return this.props.role === 'owner' || this.props.role === 'admin';
   }
 
