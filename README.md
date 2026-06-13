@@ -140,6 +140,7 @@ The `PasswordHasher` interface in `domain/repositories/` abstracts the algorithm
 | `PUT` | `/api/v1/users/me` | Update authenticated user profile |
 | `PUT` | `/api/v1/users/me/password` | Change authenticated user password |
 | `GET` | `/api/v1/users/:id` | Get a user by id |
+| `PUT` | `/api/v1/users/:id/role` | Change a user's role (owner/admin only) |
 | `GET` | `/health` | Liveness check |
 | `GET` | `/ready` | Readiness check (Redis, Postgres if configured) |
 | `GET` | `/metrics` | Prometheus metrics |
@@ -160,6 +161,7 @@ never diverge between transports.
 | `UserService` | `GetMe` | `GET /api/v1/users/me` |
 | `UserService` | `UpdateProfile` | `PUT /api/v1/users/me` |
 | `UserService` | `ChangePassword` | `PUT /api/v1/users/me/password` |
+| `UserService` | `ChangeRole` | `PUT /api/v1/users/:id/role` |
 
 `UserService` RPCs require an `authorization: Bearer <access_token>` request metadata entry,
 validated by the same active-account check used by the REST authentication plugin. Since gRPC has

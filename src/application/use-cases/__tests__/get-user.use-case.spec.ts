@@ -30,7 +30,7 @@ const makeUser = (id: string, role: 'owner' | 'admin' | 'member'): User =>
     id: UserId.create(id),
     name: 'Test User',
     email: Email.create(`user-${id}@example.com`),
-    passwordHash: PasswordHash.fromHash('hashed:password'),
+    passwordHash: PasswordHash.fromHash('$argon2id$password'),
     role,
     isActive: true,
     createdAt: new Date(),

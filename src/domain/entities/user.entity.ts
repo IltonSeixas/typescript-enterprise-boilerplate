@@ -1,4 +1,5 @@
 import { Email } from '../value-objects/email.vo.js';
+import { InsufficientPermissionsError } from '../errors/domain.errors.js';
 import { PasswordHash } from '../value-objects/password-hash.vo.js';
 import { UserId } from '../value-objects/user-id.vo.js';
 
@@ -105,6 +106,28 @@ export class User {
 
   canManageRoles(): boolean {
     return this.props.role === 'owner' || this.props.role === 'admin';
+  }
+
+  canPromoteTo(target: UserRole): boolean {
+    switch (this.props.role) {
+      case 'owner':
+        return true;
+      case 'admin':
+        return target === 'member';
+      default:
+        return false;
+    }
+  }
+
+  changeRole(newRole: UserRole, actor: User): User {
+    if (!actor.canPromoteTo(newRole)) {
+      throw new InsufficientPermissionsError();
+    }
+    return User.reconstitute({
+      ...this.props,
+      role: newRole,
+      updatedAt: new Date(),
+    });
   }
 
   toPlainObject(): Omit<UserProps, 'passwordHash'> & { passwordHash: string } {

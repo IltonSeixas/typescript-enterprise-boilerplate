@@ -25,7 +25,7 @@ const makeUser = (): User =>
     id: UserId.create(USER_ID),
     name: 'Alice',
     email: Email.create('alice@example.com'),
-    passwordHash: PasswordHash.fromHash('hashed:password'),
+    passwordHash: PasswordHash.fromHash('$argon2id$password'),
     role: 'member',
     isActive: true,
     createdAt: new Date(),

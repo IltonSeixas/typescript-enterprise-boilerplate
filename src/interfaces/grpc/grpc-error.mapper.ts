@@ -3,10 +3,12 @@ import {
   DomainError,
   EmailAlreadyExistsError,
   ForbiddenError,
+  InsufficientPermissionsError,
   InvalidCredentialsError,
   InvalidEmailError,
   InvalidPasswordError,
   InvalidRefreshTokenError,
+  InvalidRoleError,
   InvalidUserIdError,
   OwnerAlreadyExistsError,
   UserInactiveError,
@@ -36,6 +38,7 @@ function codeFor(err: DomainError): status {
     case err instanceof InvalidEmailError:
     case err instanceof InvalidPasswordError:
     case err instanceof InvalidUserIdError:
+    case err instanceof InvalidRoleError:
       return status.INVALID_ARGUMENT;
     case err instanceof EmailAlreadyExistsError:
     case err instanceof OwnerAlreadyExistsError:
@@ -47,6 +50,7 @@ function codeFor(err: DomainError): status {
       return status.UNAUTHENTICATED;
     case err instanceof UserInactiveError:
     case err instanceof ForbiddenError:
+    case err instanceof InsufficientPermissionsError:
       return status.PERMISSION_DENIED;
     default:
       return status.INTERNAL;
