@@ -60,7 +60,7 @@ describe('ChangePasswordUseCase', () => {
     });
 
     expect(updatedUser).not.toBeNull();
-    expect((updatedUser as unknown as User).passwordHash.toString()).toBe('$argon2id$new-password');
+    expect(updatedUser!.passwordHash.toString()).toBe('$argon2id$new-password');
   });
 
   it('lança InvalidCredentialsError para senha atual errada', async () => {

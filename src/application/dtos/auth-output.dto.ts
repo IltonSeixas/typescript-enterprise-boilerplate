@@ -1,3 +1,5 @@
+import type { UserRole } from '../../domain/entities/user.entity.js';
+
 export interface AuthOutputDto {
   accessToken: string;
   tokenType: 'Bearer';
@@ -8,7 +10,7 @@ export interface UserOutputDto {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: UserRole;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
