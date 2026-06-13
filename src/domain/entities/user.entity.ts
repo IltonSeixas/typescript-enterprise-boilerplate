@@ -108,19 +108,12 @@ export class User {
     return this.props.role === 'owner' || this.props.role === 'admin';
   }
 
-  canPromoteTo(target: UserRole): boolean {
-    switch (this.props.role) {
-      case 'owner':
-        return true;
-      case 'admin':
-        return target === 'member';
-      default:
-        return false;
-    }
+  canChangeRoleOf(target: User): boolean {
+    return this.props.role === 'owner' && !this.id.equals(target.id);
   }
 
   changeRole(newRole: UserRole, actor: User): User {
-    if (!actor.canPromoteTo(newRole)) {
+    if (!actor.canChangeRoleOf(this)) {
       throw new InsufficientPermissionsError();
     }
     return User.reconstitute({

@@ -17,29 +17,32 @@ const userWithRole = (role: UserRole): User =>
     updatedAt: new Date(),
   });
 
-describe('User.canPromoteTo', () => {
-  it('owner pode promover para qualquer papel', () => {
+describe('User.canChangeRoleOf', () => {
+  it('owner pode alterar o papel de outro usuário', () => {
+    const owner = userWithRole('owner');
+    const target = userWithRole('member');
+
+    expect(owner.canChangeRoleOf(target)).toBe(true);
+  });
+
+  it('owner não pode alterar o próprio papel', () => {
     const owner = userWithRole('owner');
 
-    expect(owner.canPromoteTo('owner')).toBe(true);
-    expect(owner.canPromoteTo('admin')).toBe(true);
-    expect(owner.canPromoteTo('member')).toBe(true);
+    expect(owner.canChangeRoleOf(owner)).toBe(false);
   });
 
-  it('admin só pode promover para member', () => {
+  it('admin não pode alterar papéis', () => {
     const admin = userWithRole('admin');
+    const target = userWithRole('member');
 
-    expect(admin.canPromoteTo('member')).toBe(true);
-    expect(admin.canPromoteTo('admin')).toBe(false);
-    expect(admin.canPromoteTo('owner')).toBe(false);
+    expect(admin.canChangeRoleOf(target)).toBe(false);
   });
 
-  it('member não pode promover ninguém', () => {
+  it('member não pode alterar papéis', () => {
     const member = userWithRole('member');
+    const target = userWithRole('member');
 
-    expect(member.canPromoteTo('member')).toBe(false);
-    expect(member.canPromoteTo('admin')).toBe(false);
-    expect(member.canPromoteTo('owner')).toBe(false);
+    expect(member.canChangeRoleOf(target)).toBe(false);
   });
 });
 
@@ -59,5 +62,11 @@ describe('User.changeRole', () => {
     const target = userWithRole('member');
 
     expect(() => target.changeRole('owner', admin)).toThrow(InsufficientPermissionsError);
+  });
+
+  it('lança InsufficientPermissionsError quando o ator tenta alterar o próprio papel', () => {
+    const owner = userWithRole('owner');
+
+    expect(() => owner.changeRole('admin', owner)).toThrow(InsufficientPermissionsError);
   });
 });

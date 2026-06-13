@@ -140,7 +140,7 @@ The `PasswordHasher` interface in `domain/repositories/` abstracts the algorithm
 | `PUT` | `/api/v1/users/me` | Update authenticated user profile |
 | `PUT` | `/api/v1/users/me/password` | Change authenticated user password |
 | `GET` | `/api/v1/users/:id` | Get a user by id |
-| `PUT` | `/api/v1/users/:id/role` | Change a user's role (owner/admin only) |
+| `PUT` | `/api/v1/users/:id/role` | Change a user's role (owner only, cannot change own role) |
 | `GET` | `/health` | Liveness check |
 | `GET` | `/ready` | Readiness check (Redis, Postgres if configured) |
 | `GET` | `/metrics` | Prometheus metrics |
