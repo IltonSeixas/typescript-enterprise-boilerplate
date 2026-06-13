@@ -9,6 +9,7 @@ import { LogoutUserUseCase } from '../../application/use-cases/logout-user.use-c
 import { GetUserUseCase } from '../../application/use-cases/get-user.use-case.js';
 import { UpdateProfileUseCase } from '../../application/use-cases/update-profile.use-case.js';
 import { ChangePasswordUseCase } from '../../application/use-cases/change-password.use-case.js';
+import { ChangeRoleUseCase } from '../../application/use-cases/change-role.use-case.js';
 import type { TokenServicePort } from '../../application/ports/token-service.port.js';
 import type { UserRepository } from '../../domain/repositories/user.repository.js';
 import { AuthServiceGrpc, bindAuthService } from './auth-service.grpc.js';
@@ -33,6 +34,7 @@ export interface GrpcServerDependencies {
   getUser: GetUserUseCase;
   updateProfile: UpdateProfileUseCase;
   changePassword: ChangePasswordUseCase;
+  changeRole: ChangeRoleUseCase;
   tokenService: TokenServicePort;
   userRepository: UserRepository;
 }
@@ -60,6 +62,7 @@ export function createGrpcServer(deps: GrpcServerDependencies): Server {
     deps.getUser,
     deps.updateProfile,
     deps.changePassword,
+    deps.changeRole,
     deps.tokenService,
     deps.userRepository,
   );

@@ -1,27 +1,24 @@
 import type { FastifyInstance } from 'fastify';
-import { z, ZodError } from 'zod';
 import { GetUserUseCase } from '../../../application/use-cases/get-user.use-case.js';
 import { UpdateProfileUseCase } from '../../../application/use-cases/update-profile.use-case.js';
 import { ChangePasswordUseCase } from '../../../application/use-cases/change-password.use-case.js';
+import { ChangeRoleUseCase } from '../../../application/use-cases/change-role.use-case.js';
+import { UpdateProfileSchema } from '../../../application/dtos/update-profile.dto.js';
+import { ChangePasswordSchema } from '../../../application/dtos/change-password.dto.js';
+import { ChangeRoleSchema } from '../../../application/dtos/change-role.dto.js';
 import {
   ForbiddenError,
+  InsufficientPermissionsError,
   InvalidCredentialsError,
   UserNotFoundError,
 } from '../../../domain/errors/domain.errors.js';
-
-const UpdateProfileSchema = z.object({
-  name: z.string().min(1).max(100),
-});
-
-const ChangePasswordSchema = z.object({
-  currentPassword: z.string().min(8),
-  newPassword: z.string().min(8),
-});
+import { domainError, formatZodError } from '../http-errors.js';
 
 interface UserRoutesOpts {
   getUser: GetUserUseCase;
   updateProfile: UpdateProfileUseCase;
   changePassword: ChangePasswordUseCase;
+  changeRole: ChangeRoleUseCase;
 }
 
 export function userRoutes(app: FastifyInstance, opts: UserRoutesOpts): void {
@@ -95,24 +92,26 @@ export function userRoutes(app: FastifyInstance, opts: UserRoutesOpts): void {
       throw err;
     }
   });
-}
 
-function formatZodError(err: ZodError): object {
-  return {
-    statusCode: 400,
-    error: 'Bad Request',
-    message: 'Validation failed',
-    details: err.issues.map((e) => ({
-      path: e.path.join('.'),
-      message: e.message,
-    })),
-  };
-}
+  app.put('/:id/role', async (request, reply) => {
+    const { id } = request.params as { id: string };
 
-function domainError(err: { code: string; message: string }): object {
-  return {
-    statusCode: undefined,
-    error: err.code,
-    message: err.message,
-  };
+    const parsed = ChangeRoleSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send(formatZodError(parsed.error));
+    }
+
+    try {
+      const user = await opts.changeRole.execute(request.auth.id, id, parsed.data);
+      return reply.status(200).send(user);
+    } catch (err) {
+      if (err instanceof UserNotFoundError) {
+        return reply.status(404).send(domainError(err));
+      }
+      if (err instanceof InsufficientPermissionsError) {
+        return reply.status(403).send(domainError(err));
+      }
+      throw err;
+    }
+  });
 }

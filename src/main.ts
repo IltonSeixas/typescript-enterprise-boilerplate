@@ -26,6 +26,7 @@ import { RefreshTokenUseCase } from './application/use-cases/refresh-token.use-c
 import { GetUserUseCase } from './application/use-cases/get-user.use-case.js';
 import { UpdateProfileUseCase } from './application/use-cases/update-profile.use-case.js';
 import { ChangePasswordUseCase } from './application/use-cases/change-password.use-case.js';
+import { ChangeRoleUseCase } from './application/use-cases/change-role.use-case.js';
 import { createGrpcServer, startGrpcServer, stopGrpcServer } from './interfaces/grpc/server.js';
 
 const NODE_ENV = process.env['NODE_ENV'] ?? 'development';
@@ -111,6 +112,7 @@ const logoutUser = container.resolve(LogoutUserUseCase);
 const getUser = container.resolve(GetUserUseCase);
 const updateProfile = container.resolve(UpdateProfileUseCase);
 const changePassword = container.resolve(ChangePasswordUseCase);
+const changeRole = container.resolve(ChangeRoleUseCase);
 
 await app.register(
   async (api) => {
@@ -127,6 +129,7 @@ await app.register(
       getUser,
       updateProfile,
       changePassword,
+      changeRole,
     });
   },
   { prefix: '/api/v1' },
@@ -149,6 +152,7 @@ const grpcServer = createGrpcServer({
   getUser,
   updateProfile,
   changePassword,
+  changeRole,
   tokenService,
   userRepository,
 });

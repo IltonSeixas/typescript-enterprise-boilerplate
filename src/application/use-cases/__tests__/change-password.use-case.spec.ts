@@ -25,8 +25,8 @@ const makeUserRepo = (overrides?: Partial<UserRepository>): UserRepository => ({
 });
 
 const makeHasher = (): PasswordHasherPort => ({
-  hash: async (plain: string) => `hashed:${plain}`,
-  verify: async (hash: string, plain: string) => hash === `hashed:${plain}`,
+  hash: async (plain: string) => `$argon2id$${plain}`,
+  verify: async (hash: string, plain: string) => hash === `$argon2id$${plain}`,
 });
 
 const makeUser = (): User =>
@@ -34,7 +34,7 @@ const makeUser = (): User =>
     id: UserId.create(USER_ID),
     name: 'Alice',
     email: Email.create('alice@example.com'),
-    passwordHash: PasswordHash.fromHash('hashed:current-password'),
+    passwordHash: PasswordHash.fromHash('$argon2id$current-password'),
     role: 'member',
     isActive: true,
     createdAt: new Date(),
@@ -60,7 +60,7 @@ describe('ChangePasswordUseCase', () => {
     });
 
     expect(updatedUser).not.toBeNull();
-    expect((updatedUser as unknown as User).passwordHash.toString()).toBe('hashed:new-password');
+    expect((updatedUser as unknown as User).passwordHash.toString()).toBe('$argon2id$new-password');
   });
 
   it('lança InvalidCredentialsError para senha atual errada', async () => {

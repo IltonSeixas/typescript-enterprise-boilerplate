@@ -1,5 +1,4 @@
 import type { FastifyInstance } from 'fastify';
-import { ZodError } from 'zod';
 import { LoginUserUseCase } from '../../../application/use-cases/login-user.use-case.js';
 import { LogoutUserUseCase } from '../../../application/use-cases/logout-user.use-case.js';
 import { RefreshTokenUseCase } from '../../../application/use-cases/refresh-token.use-case.js';
@@ -17,6 +16,7 @@ import {
 import {
   RegisterUserSchema,
 } from '../../../application/dtos/register-user.dto.js';
+import { domainError, formatZodError } from '../http-errors.js';
 
 const COOKIE_NAME = 'refresh_token';
 
@@ -136,24 +136,4 @@ export function authRoutes(app: FastifyInstance, opts: AuthRoutesOpts): void {
       return reply.status(204).send();
     },
   );
-}
-
-function formatZodError(err: ZodError): object {
-  return {
-    statusCode: 400,
-    error: 'Bad Request',
-    message: 'Validation failed',
-    details: err.issues.map((e) => ({
-      path: e.path.join('.'),
-      message: e.message,
-    })),
-  };
-}
-
-function domainError(err: { code: string; message: string }): object {
-  return {
-    statusCode: undefined,
-    error: err.code,
-    message: err.message,
-  };
 }
