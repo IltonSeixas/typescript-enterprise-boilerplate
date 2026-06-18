@@ -38,6 +38,8 @@ const REDIS_URL = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
 const DATABASE_URL = process.env['DATABASE_URL'];
 const OTLP_ENDPOINT = process.env['OTLP_ENDPOINT'] ?? 'http://localhost:4317';
 const SERVICE_VERSION = process.env['npm_package_version'] ?? '1.0.0';
+const JWT_ACCESS_TTL = parseInt(process.env['JWT_ACCESS_TTL'] ?? '900', 10);
+const JWT_REFRESH_TTL = parseInt(process.env['JWT_REFRESH_TTL'] ?? '604800', 10);
 
 if (!JWT_SECRET) {
   process.stderr.write('JWT_SECRET environment variable is required\n');
@@ -65,8 +67,8 @@ if (DATABASE_URL) {
 }
 
 container.register('JwtSecret', { useValue: JWT_SECRET });
-container.register('JwtAccessTtl', { useValue: 900 });
-container.register('JwtRefreshTtl', { useValue: 604800 });
+container.register('JwtAccessTtl', { useValue: JWT_ACCESS_TTL });
+container.register('JwtRefreshTtl', { useValue: JWT_REFRESH_TTL });
 container.register('RedisUrl', { useValue: REDIS_URL });
 
 const app = Fastify({

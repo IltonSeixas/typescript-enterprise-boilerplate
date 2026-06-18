@@ -214,11 +214,13 @@ All configuration via environment variables, validated with Zod at startup (inva
 | `PORT` | `3000` | HTTP port |
 | `GRPC_PORT` | `50051` | gRPC port |
 | `JWT_SECRET` | — | HS256 signing key (min 32 chars) — required, fails fast if missing |
+| `JWT_ACCESS_TTL` | `900` | Access token TTL in seconds |
+| `JWT_REFRESH_TTL` | `604800` | Refresh token TTL in seconds |
 | `REDIS_URL` | `redis://localhost:6379` | Redis connection string (refresh token storage) |
 | `ALLOWED_ORIGINS` | — | Comma-separated CORS allow-list — empty disables cross-origin requests entirely |
 | `OTLP_ENDPOINT` | `http://localhost:4317` | OTLP gRPC endpoint for traces |
 
-Access/refresh token TTLs (900s / 604800s) and the global rate limit (100 requests per 60-second window per IP, via `@fastify/rate-limit`) are currently fixed in the composition root (`src/main.ts`) rather than environment-driven — adjust them there if your deployment needs different values.
+The global rate limit (100 requests per 60-second window per IP, via `@fastify/rate-limit`) is currently fixed in the composition root (`src/main.ts`) rather than environment-driven — adjust it there if your deployment needs different values.
 
 ---
 
