@@ -63,6 +63,7 @@
     "protobufjs"
   ],
   "overrides": {
-    "esbuild": "^0.28.1"
+    "esbuild": "^0.28.1",
+    "protobufjs": "^7.6.3"
   }
 }
