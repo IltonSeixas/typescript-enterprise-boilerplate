@@ -40,7 +40,7 @@ export const authPlugin = fp(
       const token = authHeader.slice(7);
       let payload: { sub: string; jti: string };
       try {
-        payload = opts.tokenService.verifyAccessToken(token);
+        payload = await opts.tokenService.verifyAccessToken(token);
       } catch {
         await reply.status(401).send({
           statusCode: 401,

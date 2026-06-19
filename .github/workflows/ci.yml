@@ -60,11 +60,17 @@ jobs:
       - name: Upload coverage
         uses: codecov/codecov-action@v7
 
+      - name: Generate JWT key pair
+        run: |
+          openssl genpkey -algorithm ed25519 -out /tmp/jwt_private.pem
+          openssl pkey -in /tmp/jwt_private.pem -pubout -out /tmp/jwt_public.pem
+
       - name: Integration tests
         env:
           DATABASE_URL: postgres://test:test@localhost:5432/test
           REDIS_URL: redis://localhost:6379
-          JWT_SECRET: ci-test-secret-value-minimum-32-chars
+          JWT_PRIVATE_KEY_PATH: /tmp/jwt_private.pem
+          JWT_PUBLIC_KEY_PATH: /tmp/jwt_public.pem
           ADAPTER: postgres
         run: bun run test:integration
 

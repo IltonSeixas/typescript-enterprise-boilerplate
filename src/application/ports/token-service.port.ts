@@ -4,8 +4,8 @@ export interface AccessTokenPayload {
 }
 
 export interface TokenServicePort {
-  signAccessToken(payload: AccessTokenPayload): string;
-  verifyAccessToken(token: string): AccessTokenPayload;
+  signAccessToken(payload: AccessTokenPayload): Promise<string>;
+  verifyAccessToken(token: string): Promise<AccessTokenPayload>;
   issueRefreshToken(userId: string): Promise<string>;
   consumeRefreshToken(token: string): Promise<string>;
   revokeRefreshToken(token: string): Promise<void>;

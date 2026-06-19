@@ -37,7 +37,7 @@ export class RefreshTokenUseCase {
     }
 
     const jti = crypto.randomUUID();
-    const accessToken = this.tokens.signAccessToken({
+    const accessToken = await this.tokens.signAccessToken({
       sub: user.id.toString(),
       jti,
     });
