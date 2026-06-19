@@ -186,7 +186,8 @@ container.registerSingleton('RedisStore', RedisStore);
 container.register('PasswordHasher', { useClass: Argon2Hasher });
 container.register('TokenService', { useClass: JwtService });
 container.register('UserRepository', { useClass: InMemoryUserRepository });
-container.register('JwtSecret', { useValue: JWT_SECRET });
+container.register('JwtPrivateKey', { useValue: JWT_PRIVATE_KEY });
+container.register('JwtPublicKey', { useValue: JWT_PUBLIC_KEY });
 container.register('JwtAccessTtl', { useValue: 900 });
 container.register('JwtRefreshTtl', { useValue: 604800 });
 ```

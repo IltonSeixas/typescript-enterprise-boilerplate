@@ -64,7 +64,7 @@ infrastructure/ → application/ → domain/
 | gRPC | `@grpc/grpc-js` + `@grpc/proto-loader` |
 | Database (production) | `drizzle-orm` + `postgres` |
 | Password hashing | `argon2` (native bindings) |
-| JWT | `jsonwebtoken` |
+| JWT | `jose` |
 | Observability | `@opentelemetry/sdk-node` |
 | Structured logging | `pino` (built into Fastify) |
 | DI container | `tsyringe` |
@@ -81,11 +81,15 @@ infrastructure/ → application/ → domain/
 - Bun 1.3+
 - Optional for production: PostgreSQL 15+, Redis 7+
 
-### Run immediately (in-memory, zero config)
+### Run immediately (in-memory, zero database)
 
 ```bash
 git clone https://github.com/your-org/typescript-enterprise-boilerplate
 cd typescript-enterprise-boilerplate
+
+cp .env.example .env
+openssl genpkey -algorithm ed25519 -out jwt_private.pem
+openssl pkey -in jwt_private.pem -pubout -out jwt_public.pem
 
 bun install && bun run dev
 ```
@@ -113,7 +117,7 @@ The `PasswordHasher` interface in `domain/repositories/` abstracts the algorithm
 
 ### Authentication Flow
 
-- **Access token**: JWT HS256, TTL 15 min, validated by Fastify JWT plugin
+- **Access token**: JWT EdDSA (Ed25519), TTL 15 min, validated by Fastify JWT plugin
 - **Refresh token**: opaque UUID (crypto.randomUUID), stored in Redis with TTL 7 days, rotated on every use, delivered via HttpOnly cookie
 - **Revocation**: delete the Redis key to immediately invalidate the session
 
@@ -213,7 +217,8 @@ All configuration via environment variables, validated with Zod at startup (inva
 | `HOST` | `0.0.0.0` | Bind address |
 | `PORT` | `3000` | HTTP port |
 | `GRPC_PORT` | `50051` | gRPC port |
-| `JWT_SECRET` | — | HS256 signing key (min 32 chars) — required, fails fast if missing |
+| `JWT_PRIVATE_KEY_PATH` | — | Path to the Ed25519 PEM private key used to sign access tokens — required, fails fast if missing |
+| `JWT_PUBLIC_KEY_PATH` | — | Path to the Ed25519 PEM public key used to verify access tokens — required, fails fast if missing |
 | `JWT_ACCESS_TTL` | `900` | Access token TTL in seconds |
 | `JWT_REFRESH_TTL` | `604800` | Refresh token TTL in seconds |
 | `REDIS_URL` | `redis://localhost:6379` | Redis connection string (refresh token storage) |
@@ -230,11 +235,17 @@ The global rate limit (100 requests per 60-second window per IP, via `@fastify/r
 # Multi-stage build — Bun Alpine final image
 docker build -t typescript-enterprise-boilerplate .
 
-docker run -p 3000:3000 -p 50051:50051 --env-file .env typescript-enterprise-boilerplate
+docker run -p 3000:3000 -p 50051:50051 --env-file .env \
+  -v "$(pwd)/jwt_private.pem:/app/jwt_private.pem:ro" \
+  -v "$(pwd)/jwt_public.pem:/app/jwt_public.pem:ro" \
+  typescript-enterprise-boilerplate
 ```
 
 ```bash
 # Full stack: app + postgres + redis + jaeger
+# Requires jwt_private.pem/jwt_public.pem in the repo root — see Configuration above
+openssl genpkey -algorithm ed25519 -out jwt_private.pem
+openssl pkey -in jwt_private.pem -pubout -out jwt_public.pem
 docker compose up
 ```
 

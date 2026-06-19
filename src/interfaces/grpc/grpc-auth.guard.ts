@@ -27,7 +27,7 @@ export async function authenticateCall(
   const token = header.slice(7);
   let payload: AccessTokenPayload;
   try {
-    payload = tokenService.verifyAccessToken(token);
+    payload = await tokenService.verifyAccessToken(token);
   } catch {
     throw grpcError(status.UNAUTHENTICATED, 'invalid or expired token');
   }

@@ -41,7 +41,7 @@ export class LoginUserUseCase {
     }
 
     const jti = crypto.randomUUID();
-    const accessToken = this.tokens.signAccessToken({
+    const accessToken = await this.tokens.signAccessToken({
       sub: user.id.toString(),
       jti,
     });
