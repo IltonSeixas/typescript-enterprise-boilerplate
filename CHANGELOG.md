@@ -21,5 +21,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Thi
 - Docker multi-stage image (Bun-based) and docker-compose stack
 - GitHub Actions CI (typecheck, lint, test, bun audit), Docker, and Release workflows
 - Architecture documentation, ADRs, security policy
+- `JWT_ACCESS_TTL` and `JWT_REFRESH_TTL` environment variables to configure token lifetimes
+
+### Fixed
+- Moderate `protobufjs` vulnerability (GHSA-f38q-mgvj-vph7) via a transitive dependency override
 
 [Unreleased]: https://github.com/IltonSeixas/typescript-enterprise-boilerplate/compare/HEAD

@@ -46,7 +46,7 @@ Timing-safe comparison is handled internally by the `argon2` library. `argon2.ve
 ### Access Token (JWT HS256)
 
 - Algorithm: HS256 (HMAC-SHA256) via `jsonwebtoken`, signed in `JwtService`
-- TTL: 15 minutes (hardcoded `JwtAccessTtl` constant — 900 seconds)
+- TTL: configurable via `JWT_ACCESS_TTL` (default: 15 minutes / 900 seconds)
 - Claims: `sub` (user ID), `jti` (unique token ID)
 - Transport: returned in the JSON response body (`accessToken`); the client is responsible for storage and for sending it as `Authorization: Bearer <token>`
 - Validation: signature + expiry checked on every authenticated request via the `authPlugin` Fastify preHandler hook
@@ -54,7 +54,7 @@ Timing-safe comparison is handled internally by the `argon2` library. `argon2.ve
 ### Refresh Token
 
 - Format: opaque UUID v4 via `crypto.randomUUID()` (built into the runtime, no library)
-- Storage: server-side in Redis with TTL 7 days (hardcoded `JwtRefreshTtl` constant — 604800 seconds)
+- Storage: server-side in Redis, TTL configurable via `JWT_REFRESH_TTL` (default: 7 days / 604800 seconds)
 - Transport: `HttpOnly`, `Secure`, `SameSite=Strict` cookie set via `@fastify/cookie`, scoped to the `/api/v1/auth` path — never exposed to client-side JavaScript
 - Rotation: a new refresh token is issued on every use; the old one is immediately invalidated
 - Revocation: deleting the Redis key invalidates the session instantly

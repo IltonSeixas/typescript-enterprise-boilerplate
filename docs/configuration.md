@@ -32,8 +32,8 @@ cp .env.example .env
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `JWT_SECRET` | Yes | — | HS256 signing key — minimum 32 characters, use a random value. The process exits at startup if it is not set |
-
-Access token TTL (900 seconds / 15 minutes) and refresh token TTL (604800 seconds / 7 days) are hardcoded constants registered in the DI container — they are not environment-configurable.
+| `JWT_ACCESS_TTL` | No | `900` | Access token TTL in seconds |
+| `JWT_REFRESH_TTL` | No | `604800` | Refresh token TTL in seconds |
 
 ### Security
 
