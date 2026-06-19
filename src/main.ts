@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { readFile } from 'node:fs/promises';
 import { container } from 'tsyringe';
 import Fastify from 'fastify';
 import fastifyCookie from '@fastify/cookie';
@@ -33,7 +34,8 @@ const NODE_ENV = process.env['NODE_ENV'] ?? 'development';
 const HOST = process.env['HOST'] ?? '0.0.0.0';
 const PORT = parseInt(process.env['PORT'] ?? '3000', 10);
 const GRPC_PORT = parseInt(process.env['GRPC_PORT'] ?? '50051', 10);
-const JWT_SECRET = process.env['JWT_SECRET'];
+const JWT_PRIVATE_KEY_PATH = process.env['JWT_PRIVATE_KEY_PATH'];
+const JWT_PUBLIC_KEY_PATH = process.env['JWT_PUBLIC_KEY_PATH'];
 const REDIS_URL = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
 const DATABASE_URL = process.env['DATABASE_URL'];
 const OTLP_ENDPOINT = process.env['OTLP_ENDPOINT'] ?? 'http://localhost:4317';
@@ -41,10 +43,15 @@ const SERVICE_VERSION = process.env['npm_package_version'] ?? '1.0.0';
 const JWT_ACCESS_TTL = parseInt(process.env['JWT_ACCESS_TTL'] ?? '900', 10);
 const JWT_REFRESH_TTL = parseInt(process.env['JWT_REFRESH_TTL'] ?? '604800', 10);
 
-if (!JWT_SECRET) {
-  process.stderr.write('JWT_SECRET environment variable is required\n');
+if (!JWT_PRIVATE_KEY_PATH || !JWT_PUBLIC_KEY_PATH) {
+  process.stderr.write(
+    'JWT_PRIVATE_KEY_PATH and JWT_PUBLIC_KEY_PATH environment variables are required\n',
+  );
   process.exit(1);
 }
+
+const JWT_PRIVATE_KEY = await readFile(JWT_PRIVATE_KEY_PATH, 'utf-8');
+const JWT_PUBLIC_KEY = await readFile(JWT_PUBLIC_KEY_PATH, 'utf-8');
 
 setupTelemetry({
   serviceName: 'typescript-enterprise-boilerplate',
@@ -66,7 +73,8 @@ if (DATABASE_URL) {
   container.registerSingleton('UserRepository', InMemoryUserRepository);
 }
 
-container.register('JwtSecret', { useValue: JWT_SECRET });
+container.register('JwtPrivateKey', { useValue: JWT_PRIVATE_KEY });
+container.register('JwtPublicKey', { useValue: JWT_PUBLIC_KEY });
 container.register('JwtAccessTtl', { useValue: JWT_ACCESS_TTL });
 container.register('JwtRefreshTtl', { useValue: JWT_REFRESH_TTL });
 container.register('RedisUrl', { useValue: REDIS_URL });
