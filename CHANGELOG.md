@@ -12,7 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Thi
 - Initial project structure: Clean Architecture + DDD layers
 - In-memory user repository adapter (zero-config default)
 - Argon2id password hashing via `argon2` npm package
-- JWT HS256 access token (returned in the response body, with a `jti` claim) + opaque UUID refresh token, rotated and stored server-side in Redis, delivered as an HttpOnly/Secure/SameSite=Strict cookie scoped to `/api/v1/auth`
+- JWT access token (returned in the response body, with a `jti` claim) + opaque UUID refresh token, rotated and stored server-side in Redis, delivered as an HttpOnly/Secure/SameSite=Strict cookie scoped to `/api/v1/auth`
 - Fastify HTTP server with security plugins (`@fastify/rate-limit`, `@fastify/helmet`, `@fastify/cors`, `@fastify/cookie`)
 - gRPC server with `@grpc/grpc-js`, mirroring the REST auth and user endpoints
 - OpenTelemetry distributed tracing via OTLP, structured logs via Pino
@@ -22,6 +22,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Thi
 - GitHub Actions CI (typecheck, lint, test, bun audit), Docker, and Release workflows
 - Architecture documentation, ADRs, security policy
 - `JWT_ACCESS_TTL` and `JWT_REFRESH_TTL` environment variables to configure token lifetimes
+
+### Changed
+- **Breaking:** JWT access tokens are now signed with EdDSA (Ed25519) instead of HS256. `JWT_SECRET` is replaced by `JWT_PRIVATE_KEY_PATH`/`JWT_PUBLIC_KEY_PATH` — see [ADR-0005](docs/adr/0005-eddsa-jwt-signing.md). Tokens issued under the previous version are not valid under this one.
+- **Breaking:** Replaced `jsonwebtoken` with `jose` (the former has no EdDSA support). `TokenServicePort.signAccessToken`/`verifyAccessToken` are now `async`.
 
 ### Fixed
 - Moderate `protobufjs` vulnerability (GHSA-f38q-mgvj-vph7) via a transitive dependency override

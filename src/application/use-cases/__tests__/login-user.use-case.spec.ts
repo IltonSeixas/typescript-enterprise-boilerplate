@@ -29,8 +29,8 @@ const makeHasher = (): PasswordHasherPort => ({
 });
 
 const makeTokenService = (): TokenServicePort => ({
-  signAccessToken: (_payload: AccessTokenPayload) => 'access-token',
-  verifyAccessToken: (_token: string) => ({ sub: 'user-id', jti: 'jti' }),
+  signAccessToken: async (_payload: AccessTokenPayload) => 'access-token',
+  verifyAccessToken: async (_token: string) => ({ sub: 'user-id', jti: 'jti' }),
   issueRefreshToken: async (_userId: string) => 'refresh-token',
   consumeRefreshToken: async (_token: string) => 'user-id',
   revokeRefreshToken: async (_token: string) => {},

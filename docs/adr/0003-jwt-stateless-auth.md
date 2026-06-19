@@ -11,7 +11,7 @@ Authentication requires a balance between statelessness and revocability.
 
 ## Decision
 
-Hybrid model: stateless JWT HS256 access token (TTL 15 min) + opaque UUID refresh token stored in Redis (TTL 7 days, rotated on use, HttpOnly + SameSite=Strict cookie).
+Hybrid model: stateless JWT access token (see [ADR-0005](0005-eddsa-jwt-signing.md) for the signing algorithm; TTL 15 min) + opaque UUID refresh token stored in Redis (TTL 7 days, rotated on use, HttpOnly + SameSite=Strict cookie).
 
 ## Consequences
 

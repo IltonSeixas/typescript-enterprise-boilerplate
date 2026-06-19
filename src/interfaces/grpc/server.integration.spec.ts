@@ -42,10 +42,10 @@ interface InMemoryTokenServiceState {
 function makeInMemoryTokenService(): TokenServicePort & InMemoryTokenServiceState {
   return {
     refreshTokens: new Map<string, string>(),
-    signAccessToken(payload: AccessTokenPayload): string {
+    async signAccessToken(payload: AccessTokenPayload): Promise<string> {
       return `access:${payload.sub}:${payload.jti}`;
     },
-    verifyAccessToken(token: string): AccessTokenPayload {
+    async verifyAccessToken(token: string): Promise<AccessTokenPayload> {
       const [, sub, jti] = token.split(':');
       return { sub: sub ?? '', jti: jti ?? '' };
     },

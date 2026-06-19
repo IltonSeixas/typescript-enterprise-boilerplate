@@ -43,13 +43,14 @@ Timing-safe comparison is handled internally by the `argon2` library. `argon2.ve
 
 ## Authentication
 
-### Access Token (JWT HS256)
+### Access Token (JWT EdDSA)
 
-- Algorithm: HS256 (HMAC-SHA256) via `jsonwebtoken`, signed in `JwtService`
+- Algorithm: EdDSA (Ed25519) via `jose`, signed in `JwtService` — asymmetric, the private key (`JWT_PRIVATE_KEY_PATH`) signs and the public key (`JWT_PUBLIC_KEY_PATH`) verifies
 - TTL: configurable via `JWT_ACCESS_TTL` (default: 15 minutes / 900 seconds)
 - Claims: `sub` (user ID), `jti` (unique token ID)
 - Transport: returned in the JSON response body (`accessToken`); the client is responsible for storage and for sending it as `Authorization: Bearer <token>`
 - Validation: signature + expiry checked on every authenticated request via the `authPlugin` Fastify preHandler hook
+- Key separation: only the service that issues tokens needs the private key — other services can verify tokens holding only the public key
 
 ### Refresh Token
 

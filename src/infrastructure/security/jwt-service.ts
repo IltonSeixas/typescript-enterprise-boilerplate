@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import jwt from 'jsonwebtoken';
+import { importPKCS8, importSPKI, jwtVerify, SignJWT, type CryptoKey } from 'jose';
 import { inject, injectable } from 'tsyringe';
 import {
   AccessTokenPayload,
@@ -9,28 +9,47 @@ import { InvalidRefreshTokenError } from '../../domain/errors/domain.errors.js';
 import { RedisStore } from '../cache/redis-store.js';
 
 const REFRESH_PREFIX = 'refresh:';
+const ALGORITHM = 'EdDSA';
 
 @injectable()
 export class JwtService implements TokenServicePort {
+  private privateKeyPromise: Promise<CryptoKey> | undefined;
+  private publicKeyPromise: Promise<CryptoKey> | undefined;
+
   constructor(
-    @inject('JwtSecret') private readonly secret: string,
+    @inject('JwtPrivateKey') private readonly privateKey: string,
+    @inject('JwtPublicKey') private readonly publicKey: string,
     @inject('JwtAccessTtl') private readonly accessTtl: number,
     @inject('JwtRefreshTtl') private readonly refreshTtl: number,
     @inject('RedisStore') private readonly redis: RedisStore,
   ) {}
 
-  signAccessToken(payload: AccessTokenPayload): string {
-    return jwt.sign(payload, this.secret, {
-      algorithm: 'HS256',
-      expiresIn: this.accessTtl,
-    });
+  async signAccessToken(payload: AccessTokenPayload): Promise<string> {
+    const key = await this.getPrivateKey();
+    return new SignJWT({ jti: payload.jti })
+      .setProtectedHeader({ alg: ALGORITHM })
+      .setSubject(payload.sub)
+      .setIssuedAt()
+      .setExpirationTime(Math.floor(Date.now() / 1000) + this.accessTtl)
+      .sign(key);
   }
 
-  verifyAccessToken(token: string): AccessTokenPayload {
-    const decoded = jwt.verify(token, this.secret, {
-      algorithms: ['HS256'],
-    }) as AccessTokenPayload;
-    return decoded;
+  async verifyAccessToken(token: string): Promise<AccessTokenPayload> {
+    const key = await this.getPublicKey();
+    const { payload } = await jwtVerify(token, key, {
+      algorithms: [ALGORITHM],
+    });
+    return { sub: payload.sub as string, jti: payload['jti'] as string };
+  }
+
+  private getPrivateKey(): Promise<CryptoKey> {
+    this.privateKeyPromise ??= importPKCS8(this.privateKey, ALGORITHM);
+    return this.privateKeyPromise;
+  }
+
+  private getPublicKey(): Promise<CryptoKey> {
+    this.publicKeyPromise ??= importSPKI(this.publicKey, ALGORITHM);
+    return this.publicKeyPromise;
   }
 
   async issueRefreshToken(userId: string): Promise<string> {
