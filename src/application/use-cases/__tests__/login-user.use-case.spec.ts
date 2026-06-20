@@ -2,6 +2,8 @@ import 'reflect-metadata';
 import { describe, it, expect, beforeEach } from 'bun:test';
 import { LoginUserUseCase } from '../login-user.use-case.js';
 import type { UserRepository } from '../../../domain/repositories/user.repository.js';
+import type { AuditEvent } from '../../../domain/entities/audit-event.entity.js';
+import type { AuditPort } from '../../ports/audit.port.js';
 import type { PasswordHasherPort } from '../../ports/password-hasher.port.js';
 import type { TokenServicePort, AccessTokenPayload } from '../../ports/token-service.port.js';
 import {
@@ -36,6 +38,16 @@ const makeTokenService = (): TokenServicePort => ({
   revokeRefreshToken: async (_token: string) => {},
 });
 
+const makeAuditPort = (): AuditPort & { events: AuditEvent[] } => {
+  const events: AuditEvent[] = [];
+  return {
+    events,
+    record: async (event: AuditEvent) => {
+      events.push(event);
+    },
+  };
+};
+
 const makeActiveUser = (overrides?: Partial<{ isActive: boolean }>): User =>
   User.reconstitute({
     id: UserId.create('00000000-0000-0000-0000-000000000001'),
@@ -51,10 +63,12 @@ const makeActiveUser = (overrides?: Partial<{ isActive: boolean }>): User =>
 describe('LoginUserUseCase', () => {
   let hasher: PasswordHasherPort;
   let tokenService: TokenServicePort;
+  let audit: ReturnType<typeof makeAuditPort>;
 
   beforeEach(() => {
     hasher = makeHasher();
     tokenService = makeTokenService();
+    audit = makeAuditPort();
   });
 
   it('returns accessToken and refreshToken on successful login', async () => {
@@ -62,7 +76,7 @@ describe('LoginUserUseCase', () => {
     const repo = makeUserRepo({
       findByEmail: async () => user,
     });
-    const useCase = new LoginUserUseCase(repo, hasher, tokenService, 900);
+    const useCase = new LoginUserUseCase(repo, hasher, tokenService, 900, audit);
 
     const result = await useCase.execute({
       email: 'alice@example.com',
@@ -73,17 +87,21 @@ describe('LoginUserUseCase', () => {
     expect(result.refreshToken).toBeDefined();
     expect(result.tokenType).toBe('Bearer');
     expect(result.expiresIn).toBe(900);
+    expect(audit.events).toHaveLength(1);
+    expect(audit.events[0]?.eventType).toBe('login_succeeded');
   });
 
   it('throws InvalidCredentialsError for unknown email', async () => {
     const repo = makeUserRepo({
       findByEmail: async () => null,
     });
-    const useCase = new LoginUserUseCase(repo, hasher, tokenService, 900);
+    const useCase = new LoginUserUseCase(repo, hasher, tokenService, 900, audit);
 
     await expect(
       useCase.execute({ email: 'unknown@example.com', password: 'somepassword' }),
     ).rejects.toBeInstanceOf(InvalidCredentialsError);
+    expect(audit.events).toHaveLength(1);
+    expect(audit.events[0]?.eventType).toBe('login_failed');
   });
 
   it('throws InvalidCredentialsError for wrong password', async () => {
@@ -91,11 +109,13 @@ describe('LoginUserUseCase', () => {
     const repo = makeUserRepo({
       findByEmail: async () => user,
     });
-    const useCase = new LoginUserUseCase(repo, hasher, tokenService, 900);
+    const useCase = new LoginUserUseCase(repo, hasher, tokenService, 900, audit);
 
     await expect(
       useCase.execute({ email: 'alice@example.com', password: 'wrongpassword' }),
     ).rejects.toBeInstanceOf(InvalidCredentialsError);
+    expect(audit.events).toHaveLength(1);
+    expect(audit.events[0]?.eventType).toBe('login_failed');
   });
 
   it('throws UserInactiveError for inactive user', async () => {
@@ -103,10 +123,12 @@ describe('LoginUserUseCase', () => {
     const repo = makeUserRepo({
       findByEmail: async () => user,
     });
-    const useCase = new LoginUserUseCase(repo, hasher, tokenService, 900);
+    const useCase = new LoginUserUseCase(repo, hasher, tokenService, 900, audit);
 
     await expect(
       useCase.execute({ email: 'alice@example.com', password: 'correctpassword' }),
     ).rejects.toBeInstanceOf(UserInactiveError);
+    expect(audit.events).toHaveLength(1);
+    expect(audit.events[0]?.eventType).toBe('login_failed');
   });
 });
