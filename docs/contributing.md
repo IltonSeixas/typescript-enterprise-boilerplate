@@ -47,6 +47,7 @@ All of the above run automatically in CI on every pull request. A PR will not be
 - This rule is enforced automatically by `eslint-plugin-boundaries`, configured in `eslint.config.js` — see [ADR-0006](adr/0006-eslint-boundaries-architecture-test.md). A PR that violates it fails `bun run lint`
 - Every new use case must have a corresponding `.spec.ts` file
 - Every new value object must validate its invariants in the constructor and have tests for both valid and invalid inputs
+- No generic `BaseService`, `Manager`, or catch-all `Service` class. Each use case is its own class with a single `execute` method and an explicit, narrow set of injected dependencies — never a god class that accumulates every repository and port in the application
 
 ### Style
 
