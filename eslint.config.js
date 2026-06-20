@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import boundaries from 'eslint-plugin-boundaries';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
@@ -33,6 +34,39 @@ export default tseslint.config(
       '@typescript-eslint/require-await': 'off',
       '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
+    },
+  },
+  {
+    files: ['src/**/*.ts'],
+    plugins: { boundaries },
+    settings: {
+      'import/resolver': {
+        typescript: { project: './tsconfig.eslint.json' },
+      },
+      'boundaries/elements': [
+        { type: 'domain', pattern: 'src/domain/**/*' },
+        { type: 'application', pattern: 'src/application/**/*' },
+        { type: 'infrastructure', pattern: 'src/infrastructure/**/*' },
+        { type: 'interfaces', pattern: 'src/interfaces/**/*' },
+      ],
+    },
+    rules: {
+      'boundaries/dependencies': [
+        'error',
+        {
+          default: 'allow',
+          rules: [
+            {
+              from: { type: 'domain' },
+              disallow: { to: { type: ['application', 'infrastructure', 'interfaces'] } },
+            },
+            {
+              from: { type: 'application' },
+              disallow: { to: { type: ['infrastructure', 'interfaces'] } },
+            },
+          ],
+        },
+      ],
     },
   },
 );
