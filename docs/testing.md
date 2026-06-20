@@ -173,6 +173,15 @@ describe('gRPC server integration', () => {
 
 ---
 
+## Architecture Tests
+
+`eslint-plugin-boundaries`, configured in `eslint.config.js`, enforces the dependency rule from [ADR-0001](adr/0001-clean-architecture.md) as a real, automatically-run lint check rather than a convention checked only in review — see [ADR-0006](adr/0006-eslint-boundaries-architecture-test.md). It resolves the real module graph (via `eslint-import-resolver-typescript`) and runs as part of the default `bun run lint` step, failing the build if:
+
+- `domain/` imports from `application/`, `infrastructure/`, or `interfaces/`
+- `application/` imports from `infrastructure/` or `interfaces/`
+
+---
+
 ## TDD Workflow
 
 1. Write a failing test that describes the expected behavior
