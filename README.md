@@ -51,7 +51,7 @@ interfaces/ → application/ → domain/
 infrastructure/ → application/ → domain/
 ```
 
-`domain/` and `application/` never import from `infrastructure/` or `interfaces/`.
+`domain/` and `application/` never import from `infrastructure/` or `interfaces/`. Enforced automatically by `eslint-plugin-boundaries` (see [ADR-0006](docs/adr/0006-eslint-boundaries-architecture-test.md)) as part of the regular `bun run lint` step.
 
 ---
 
@@ -188,6 +188,7 @@ bun run test:integration  # integration tests (in-memory adapters, no external d
 
 - **Unit tests**: co-located as `*.spec.ts`. Domain entities, value objects, and use cases tested in complete isolation. Repository mocks are TypeScript classes implementing the port interface — no mocking library needed.
 - **Integration tests**: `src/**/*.integration.spec.ts`. Exercise the gRPC server end to end against in-memory adapters, using `bun:test` as the runner.
+- **Architecture tests**: `eslint-plugin-boundaries`, configured in `eslint.config.js`, enforces the Clean Architecture dependency rule from [ADR-0001](docs/adr/0001-clean-architecture.md) — see [ADR-0006](docs/adr/0006-eslint-boundaries-architecture-test.md). Runs as part of the regular `bun run lint` step.
 
 ### TDD Approach
 
