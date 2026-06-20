@@ -48,6 +48,7 @@ All of the above run automatically in CI on every pull request. A PR will not be
 - Every new use case must have a corresponding `.spec.ts` file
 - Every new value object must validate its invariants in the constructor and have tests for both valid and invalid inputs
 - No generic `BaseService`, `Manager`, or catch-all `Service` class. Each use case is its own class with a single `execute` method and an explicit, narrow set of injected dependencies — never a god class that accumulates every repository and port in the application
+- All validation — request/response DTOs, environment configuration, and event payloads — must use Zod. Never hand-roll validation with manual type guards or `if` chains. Environment variables are validated once at startup via `EnvSchema` in `src/infrastructure/config/env.schema.ts`; invalid configuration fails fast with a non-zero exit code before any server starts listening
 
 ### Style
 
