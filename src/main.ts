@@ -12,6 +12,8 @@ import { JwtService } from './infrastructure/security/jwt-service.js';
 import { InMemoryUserRepository } from './infrastructure/persistence/in-memory/user.repository.js';
 import { PostgresUserRepository } from './infrastructure/persistence/postgres/user.repository.js';
 import { createPostgresDatabase } from './infrastructure/persistence/postgres/connection.js';
+import { InMemoryAuditAdapter } from './infrastructure/audit/in-memory-audit.adapter.js';
+import { PostgresAuditAdapter } from './infrastructure/audit/postgres-audit.adapter.js';
 import type { UserRepository } from './domain/repositories/user.repository.js';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { securityHeadersPlugin } from './interfaces/http/plugins/security-headers.plugin.js';
@@ -88,6 +90,13 @@ const app = Fastify({
           },
         },
 });
+
+container.register('Logger', { useValue: app.log });
+if (database) {
+  container.registerSingleton('AuditPort', PostgresAuditAdapter);
+} else {
+  container.registerSingleton('AuditPort', InMemoryAuditAdapter);
+}
 
 await app.register(securityHeadersPlugin);
 await app.register(rateLimitPlugin, { max: 100, timeWindow: 60000 });

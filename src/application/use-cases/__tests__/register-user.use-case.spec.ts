@@ -2,6 +2,8 @@ import 'reflect-metadata';
 import { describe, it, expect, beforeEach } from 'bun:test';
 import { RegisterUserUseCase } from '../register-user.use-case.js';
 import type { UserRepository } from '../../../domain/repositories/user.repository.js';
+import type { AuditEvent } from '../../../domain/entities/audit-event.entity.js';
+import type { AuditPort } from '../../ports/audit.port.js';
 import type { PasswordHasherPort } from '../../ports/password-hasher.port.js';
 import { EmailAlreadyExistsError } from '../../../domain/errors/domain.errors.js';
 import { User } from '../../../domain/entities/user.entity.js';
@@ -24,6 +26,16 @@ const makeHasher = (): PasswordHasherPort => ({
   verify: async (hash: string, plain: string) => hash === `$argon2id$${plain}`,
 });
 
+const makeAuditPort = (): AuditPort & { events: AuditEvent[] } => {
+  const events: AuditEvent[] = [];
+  return {
+    events,
+    record: async (event: AuditEvent) => {
+      events.push(event);
+    },
+  };
+};
+
 const makeExistingUser = (): User =>
   User.reconstitute({
     id: UserId.create('00000000-0000-0000-0000-000000000001'),
@@ -38,14 +50,16 @@ const makeExistingUser = (): User =>
 
 describe('RegisterUserUseCase', () => {
   let hasher: PasswordHasherPort;
+  let audit: ReturnType<typeof makeAuditPort>;
 
   beforeEach(() => {
     hasher = makeHasher();
+    audit = makeAuditPort();
   });
 
   it('registers a member when an owner already exists', async () => {
     const repo = makeUserRepo();
-    const useCase = new RegisterUserUseCase(repo, hasher);
+    const useCase = new RegisterUserUseCase(repo, hasher, audit);
 
     const result = await useCase.execute({
       name: 'Alice',
@@ -57,6 +71,8 @@ describe('RegisterUserUseCase', () => {
     expect(result.email).toBe('alice@example.com');
     expect(result.role).toBe('member');
     expect(result.isActive).toBe(true);
+    expect(audit.events).toHaveLength(1);
+    expect(audit.events[0]?.eventType).toBe('user_registered');
   });
 
   it('throws EmailAlreadyExistsError when email is taken', async () => {
@@ -64,7 +80,7 @@ describe('RegisterUserUseCase', () => {
     const repo = makeUserRepo({
       findByEmail: async () => existing,
     });
-    const useCase = new RegisterUserUseCase(repo, hasher);
+    const useCase = new RegisterUserUseCase(repo, hasher, audit);
 
     await expect(
       useCase.execute({
@@ -83,7 +99,7 @@ describe('RegisterUserUseCase', () => {
         savedUser = user;
       },
     });
-    const useCase = new RegisterUserUseCase(repo, hasher);
+    const useCase = new RegisterUserUseCase(repo, hasher, audit);
 
     const result = await useCase.execute({
       name: 'First User',
@@ -103,7 +119,7 @@ describe('RegisterUserUseCase', () => {
         savedAsMember = user;
       },
     });
-    const useCase = new RegisterUserUseCase(repo, hasher);
+    const useCase = new RegisterUserUseCase(repo, hasher, audit);
 
     const result = await useCase.execute({
       name: 'Second User',

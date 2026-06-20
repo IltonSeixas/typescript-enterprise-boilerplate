@@ -2,6 +2,8 @@ import 'reflect-metadata';
 import { describe, it, expect } from 'bun:test';
 import { ChangePasswordUseCase } from '../change-password.use-case.js';
 import type { UserRepository } from '../../../domain/repositories/user.repository.js';
+import type { AuditEvent } from '../../../domain/entities/audit-event.entity.js';
+import type { AuditPort } from '../../ports/audit.port.js';
 import type { PasswordHasherPort } from '../../ports/password-hasher.port.js';
 import {
   InvalidCredentialsError,
@@ -29,6 +31,16 @@ const makeHasher = (): PasswordHasherPort => ({
   verify: async (hash: string, plain: string) => hash === `$argon2id$${plain}`,
 });
 
+const makeAuditPort = (): AuditPort & { events: AuditEvent[] } => {
+  const events: AuditEvent[] = [];
+  return {
+    events,
+    record: async (event: AuditEvent) => {
+      events.push(event);
+    },
+  };
+};
+
 const makeUser = (): User =>
   User.reconstitute({
     id: UserId.create(USER_ID),
@@ -52,7 +64,8 @@ describe('ChangePasswordUseCase', () => {
       },
     });
     const hasher = makeHasher();
-    const useCase = new ChangePasswordUseCase(repo, hasher);
+    const audit = makeAuditPort();
+    const useCase = new ChangePasswordUseCase(repo, hasher, audit);
 
     await useCase.execute(USER_ID, {
       currentPassword: 'current-password',
@@ -61,6 +74,8 @@ describe('ChangePasswordUseCase', () => {
 
     expect(updatedUser).not.toBeNull();
     expect(updatedUser!.passwordHash.toString()).toBe('$argon2id$new-password');
+    expect(audit.events).toHaveLength(1);
+    expect(audit.events[0]?.eventType).toBe('password_changed');
   });
 
   it('lança InvalidCredentialsError para senha atual errada', async () => {
@@ -69,7 +84,8 @@ describe('ChangePasswordUseCase', () => {
       findById: async () => user,
     });
     const hasher = makeHasher();
-    const useCase = new ChangePasswordUseCase(repo, hasher);
+    const audit = makeAuditPort();
+    const useCase = new ChangePasswordUseCase(repo, hasher, audit);
 
     await expect(
       useCase.execute(USER_ID, {
@@ -84,7 +100,8 @@ describe('ChangePasswordUseCase', () => {
       findById: async () => null,
     });
     const hasher = makeHasher();
-    const useCase = new ChangePasswordUseCase(repo, hasher);
+    const audit = makeAuditPort();
+    const useCase = new ChangePasswordUseCase(repo, hasher, audit);
 
     await expect(
       useCase.execute(USER_ID, {
