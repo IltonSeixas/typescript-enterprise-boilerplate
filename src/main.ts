@@ -4,6 +4,7 @@ import { container } from 'tsyringe';
 import Fastify from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
+import { parseEnv } from './infrastructure/config/env.schema.js';
 import { setupTelemetry } from './infrastructure/telemetry/setup.js';
 import { RedisStore } from './infrastructure/cache/redis-store.js';
 import { Argon2Hasher } from './infrastructure/security/argon2-hasher.js';
@@ -30,25 +31,22 @@ import { ChangePasswordUseCase } from './application/use-cases/change-password.u
 import { ChangeRoleUseCase } from './application/use-cases/change-role.use-case.js';
 import { createGrpcServer, startGrpcServer, stopGrpcServer } from './interfaces/grpc/server.js';
 
-const NODE_ENV = process.env['NODE_ENV'] ?? 'development';
-const HOST = process.env['HOST'] ?? '0.0.0.0';
-const PORT = parseInt(process.env['PORT'] ?? '3000', 10);
-const GRPC_PORT = parseInt(process.env['GRPC_PORT'] ?? '50051', 10);
-const JWT_PRIVATE_KEY_PATH = process.env['JWT_PRIVATE_KEY_PATH'];
-const JWT_PUBLIC_KEY_PATH = process.env['JWT_PUBLIC_KEY_PATH'];
-const REDIS_URL = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
-const DATABASE_URL = process.env['DATABASE_URL'];
-const OTLP_ENDPOINT = process.env['OTLP_ENDPOINT'] ?? 'http://localhost:4317';
-const SERVICE_VERSION = process.env['npm_package_version'] ?? '1.0.0';
-const JWT_ACCESS_TTL = parseInt(process.env['JWT_ACCESS_TTL'] ?? '900', 10);
-const JWT_REFRESH_TTL = parseInt(process.env['JWT_REFRESH_TTL'] ?? '604800', 10);
-
-if (!JWT_PRIVATE_KEY_PATH || !JWT_PUBLIC_KEY_PATH) {
-  process.stderr.write(
-    'JWT_PRIVATE_KEY_PATH and JWT_PUBLIC_KEY_PATH environment variables are required\n',
-  );
-  process.exit(1);
-}
+const env = parseEnv(process.env);
+const {
+  NODE_ENV,
+  HOST,
+  PORT,
+  GRPC_PORT,
+  JWT_PRIVATE_KEY_PATH,
+  JWT_PUBLIC_KEY_PATH,
+  REDIS_URL,
+  DATABASE_URL,
+  ALLOWED_ORIGINS,
+  OTLP_ENDPOINT,
+  npm_package_version: SERVICE_VERSION,
+  JWT_ACCESS_TTL,
+  JWT_REFRESH_TTL,
+} = env;
 
 const JWT_PRIVATE_KEY = await readFile(JWT_PRIVATE_KEY_PATH, 'utf-8');
 const JWT_PUBLIC_KEY = await readFile(JWT_PUBLIC_KEY_PATH, 'utf-8');
@@ -105,13 +103,8 @@ await app.register(fastifyCookie);
 await app.register(healthRoutes, { redisStore, database });
 await app.register(metricsRoutes);
 
-const allowedOrigins = (process.env['ALLOWED_ORIGINS'] ?? '')
-  .split(',')
-  .map((o) => o.trim())
-  .filter((o) => o.length > 0);
-
 await app.register(fastifyCors, {
-  origin: allowedOrigins.length > 0 ? allowedOrigins : false,
+  origin: ALLOWED_ORIGINS.length > 0 ? ALLOWED_ORIGINS : false,
   credentials: true,
 });
 

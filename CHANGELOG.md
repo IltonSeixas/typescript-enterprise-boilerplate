@@ -23,6 +23,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Thi
 - Architecture documentation, ADRs, security policy
 - `JWT_ACCESS_TTL` and `JWT_REFRESH_TTL` environment variables to configure token lifetimes
 - `eslint-plugin-boundaries`, configured in `eslint.config.js`, enforcing the Clean Architecture dependency rule from ADR-0001 as part of `bun run lint` — see [ADR-0006](docs/adr/0006-eslint-boundaries-architecture-test.md)
+- `EnvSchema` (Zod) validating all environment variables at startup in `src/infrastructure/config/env.schema.ts`; invalid or missing configuration now fails fast with a non-zero exit code instead of failing later with an unhandled error
 
 ### Changed
 - **Breaking:** JWT access tokens are now signed with EdDSA (Ed25519) instead of HS256. `JWT_SECRET` is replaced by `JWT_PRIVATE_KEY_PATH`/`JWT_PUBLIC_KEY_PATH` — see [ADR-0005](docs/adr/0005-eddsa-jwt-signing.md). Tokens issued under the previous version are not valid under this one.
