@@ -7,6 +7,7 @@ import { LoginUserUseCase } from '../../application/use-cases/login-user.use-cas
 import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token.use-case.js';
 import { LogoutUserUseCase } from '../../application/use-cases/logout-user.use-case.js';
 import { GetUserUseCase } from '../../application/use-cases/get-user.use-case.js';
+import { ListUsersUseCase } from '../../application/use-cases/list-users.use-case.js';
 import { UpdateProfileUseCase } from '../../application/use-cases/update-profile.use-case.js';
 import { ChangePasswordUseCase } from '../../application/use-cases/change-password.use-case.js';
 import { ChangeRoleUseCase } from '../../application/use-cases/change-role.use-case.js';
@@ -32,6 +33,7 @@ export interface GrpcServerDependencies {
   refreshToken: RefreshTokenUseCase;
   logoutUser: LogoutUserUseCase;
   getUser: GetUserUseCase;
+  listUsers: ListUsersUseCase;
   updateProfile: UpdateProfileUseCase;
   changePassword: ChangePasswordUseCase;
   changeRole: ChangeRoleUseCase;
@@ -60,6 +62,7 @@ export function createGrpcServer(deps: GrpcServerDependencies): Server {
   );
   const userService = new UserServiceGrpc(
     deps.getUser,
+    deps.listUsers,
     deps.updateProfile,
     deps.changePassword,
     deps.changeRole,

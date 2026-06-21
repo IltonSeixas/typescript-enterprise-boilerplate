@@ -28,6 +28,7 @@ import { LoginUserUseCase } from './application/use-cases/login-user.use-case.js
 import { LogoutUserUseCase } from './application/use-cases/logout-user.use-case.js';
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token.use-case.js';
 import { GetUserUseCase } from './application/use-cases/get-user.use-case.js';
+import { ListUsersUseCase } from './application/use-cases/list-users.use-case.js';
 import { UpdateProfileUseCase } from './application/use-cases/update-profile.use-case.js';
 import { ChangePasswordUseCase } from './application/use-cases/change-password.use-case.js';
 import { ChangeRoleUseCase } from './application/use-cases/change-role.use-case.js';
@@ -122,6 +123,7 @@ const loginUser = container.resolve(LoginUserUseCase);
 const refreshToken = container.resolve(RefreshTokenUseCase);
 const logoutUser = container.resolve(LogoutUserUseCase);
 const getUser = container.resolve(GetUserUseCase);
+const listUsers = container.resolve(ListUsersUseCase);
 const updateProfile = container.resolve(UpdateProfileUseCase);
 const changePassword = container.resolve(ChangePasswordUseCase);
 const changeRole = container.resolve(ChangeRoleUseCase);
@@ -139,6 +141,7 @@ await app.register(
     await api.register(userRoutes, {
       prefix: '/users',
       getUser,
+      listUsers,
       updateProfile,
       changePassword,
       changeRole,
@@ -162,6 +165,7 @@ const grpcServer = createGrpcServer({
   refreshToken,
   logoutUser,
   getUser,
+  listUsers,
   updateProfile,
   changePassword,
   changeRole,
