@@ -24,6 +24,11 @@ export const EnvSchema = z.object({
     ),
   OTLP_ENDPOINT: z.string().min(1).default('http://localhost:4317'),
   npm_package_version: z.string().min(1).default('1.0.0'),
+  CIRCUIT_FAILURE_THRESHOLD: z.coerce.number().int().positive().default(5),
+  CIRCUIT_RESET_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+  RETRY_MAX_ATTEMPTS: z.coerce.number().int().positive().default(3),
+  RETRY_INITIAL_BACKOFF_MS: z.coerce.number().int().positive().default(50),
+  RETRY_BACKOFF_MULTIPLIER: z.coerce.number().int().positive().default(2),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

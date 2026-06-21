@@ -103,3 +103,11 @@ export class InvalidRoleError extends DomainError {
     super(`Invalid role: ${raw}`);
   }
 }
+
+export class ServiceUnavailableError extends DomainError {
+  readonly code = 'SERVICE_UNAVAILABLE';
+
+  constructor() {
+    super('Service temporarily unavailable');
+  }
+}

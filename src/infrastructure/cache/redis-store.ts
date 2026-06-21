@@ -1,12 +1,21 @@
 import 'reflect-metadata';
 import { Redis } from 'ioredis';
 import { inject, injectable } from 'tsyringe';
+import { CircuitBreaker } from '../resilience/circuit-breaker.js';
+import { RetryPolicy } from '../resilience/retry-policy.js';
+import { callWithResilience } from '../resilience/with-resilience.js';
+
+const alwaysRetryable = (): boolean => true;
 
 @injectable()
 export class RedisStore {
   private readonly client: Redis;
 
-  constructor(@inject('RedisUrl') redisUrl: string) {
+  constructor(
+    @inject('RedisUrl') redisUrl: string,
+    @inject('RedisCircuitBreaker') private readonly breaker: CircuitBreaker,
+    @inject('RedisRetryPolicy') private readonly retryPolicy: RetryPolicy,
+  ) {
     this.client = new Redis(redisUrl, {
       lazyConnect: true,
       enableOfflineQueue: false,
@@ -14,15 +23,21 @@ export class RedisStore {
   }
 
   async get(key: string): Promise<string | null> {
-    return this.client.get(key);
+    return callWithResilience(this.breaker, this.retryPolicy, alwaysRetryable, () =>
+      this.client.get(key),
+    );
   }
 
   async set(key: string, value: string, ttlSeconds: number): Promise<void> {
-    await this.client.set(key, value, 'EX', ttlSeconds);
+    await callWithResilience(this.breaker, this.retryPolicy, alwaysRetryable, () =>
+      this.client.set(key, value, 'EX', ttlSeconds),
+    );
   }
 
   async del(key: string): Promise<void> {
-    await this.client.del(key);
+    await callWithResilience(this.breaker, this.retryPolicy, alwaysRetryable, () =>
+      this.client.del(key),
+    );
   }
 
   async connect(): Promise<void> {
