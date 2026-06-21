@@ -7,6 +7,8 @@ import fastifyCors from '@fastify/cors';
 import { parseEnv } from './infrastructure/config/env.schema.js';
 import { setupTelemetry } from './infrastructure/telemetry/setup.js';
 import { RedisStore } from './infrastructure/cache/redis-store.js';
+import { CircuitBreaker } from './infrastructure/resilience/circuit-breaker.js';
+import { RetryPolicy } from './infrastructure/resilience/retry-policy.js';
 import { Argon2Hasher } from './infrastructure/security/argon2-hasher.js';
 import { JwtService } from './infrastructure/security/jwt-service.js';
 import { InMemoryUserRepository } from './infrastructure/persistence/in-memory/user.repository.js';
@@ -33,6 +35,8 @@ import { UpdateProfileUseCase } from './application/use-cases/update-profile.use
 import { ChangePasswordUseCase } from './application/use-cases/change-password.use-case.js';
 import { ChangeRoleUseCase } from './application/use-cases/change-role.use-case.js';
 import { createGrpcServer, startGrpcServer, stopGrpcServer } from './interfaces/grpc/server.js';
+import { ServiceUnavailableError } from './domain/errors/domain.errors.js';
+import { domainError } from './interfaces/http/http-errors.js';
 
 const env = parseEnv(process.env);
 const {
@@ -49,6 +53,11 @@ const {
   npm_package_version: SERVICE_VERSION,
   JWT_ACCESS_TTL,
   JWT_REFRESH_TTL,
+  CIRCUIT_FAILURE_THRESHOLD,
+  CIRCUIT_RESET_TIMEOUT_MS,
+  RETRY_MAX_ATTEMPTS,
+  RETRY_INITIAL_BACKOFF_MS,
+  RETRY_BACKOFF_MULTIPLIER,
 } = env;
 
 const JWT_PRIVATE_KEY = await readFile(JWT_PRIVATE_KEY_PATH, 'utf-8');
@@ -60,6 +69,12 @@ setupTelemetry({
   exporterEndpoint: OTLP_ENDPOINT,
 });
 
+container.register('RedisCircuitBreaker', {
+  useValue: new CircuitBreaker(CIRCUIT_FAILURE_THRESHOLD, CIRCUIT_RESET_TIMEOUT_MS),
+});
+container.register('RedisRetryPolicy', {
+  useValue: new RetryPolicy(RETRY_MAX_ATTEMPTS, RETRY_INITIAL_BACKOFF_MS, RETRY_BACKOFF_MULTIPLIER),
+});
 container.registerSingleton('RedisStore', RedisStore);
 container.register('PasswordHasher', { useClass: Argon2Hasher });
 container.register('TokenService', { useClass: JwtService });
@@ -152,6 +167,12 @@ await app.register(
 
 app.setErrorHandler((err, _request, reply) => {
   app.log.error(err);
+
+  if (err instanceof ServiceUnavailableError) {
+    void reply.status(503).send(domainError(err));
+    return;
+  }
+
   void reply.status(500).send({
     statusCode: 500,
     error: 'Internal Server Error',
