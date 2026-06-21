@@ -2,6 +2,8 @@ import 'reflect-metadata';
 import { describe, it, expect } from 'bun:test';
 import { ChangeRoleUseCase } from '../change-role.use-case.js';
 import type { UserRepository } from '../../../domain/repositories/user.repository.js';
+import type { AuditEvent } from '../../../domain/entities/audit-event.entity.js';
+import type { AuditPort } from '../../ports/audit.port.js';
 import { InsufficientPermissionsError, UserNotFoundError } from '../../../domain/errors/domain.errors.js';
 import { User, type UserRole } from '../../../domain/entities/user.entity.js';
 import { Email } from '../../../domain/value-objects/email.vo.js';
@@ -18,8 +20,19 @@ const makeUserRepo = (overrides?: Partial<UserRepository>): UserRepository => ({
   update: async () => {},
   saveFirstOwner: async () => {},
   hasOwner: async () => false,
+  findPaginated: async () => ({ items: [], total: 0 }),
   ...overrides,
 });
+
+const makeAuditPort = (): AuditPort & { events: AuditEvent[] } => {
+  const events: AuditEvent[] = [];
+  return {
+    events,
+    record: async (event: AuditEvent) => {
+      events.push(event);
+    },
+  };
+};
 
 const userWithRole = (id: string, email: string, role: UserRole): User =>
   User.reconstitute({
@@ -38,7 +51,7 @@ describe('ChangeRoleUseCase', () => {
     const repo = makeUserRepo({
       findById: async () => null,
     });
-    const useCase = new ChangeRoleUseCase(repo);
+    const useCase = new ChangeRoleUseCase(repo, makeAuditPort());
 
     await expect(
       useCase.execute(ACTOR_ID, TARGET_ID, { role: 'admin' }),
@@ -50,7 +63,7 @@ describe('ChangeRoleUseCase', () => {
     const repo = makeUserRepo({
       findById: async (id) => (id.toString() === ACTOR_ID ? actor : null),
     });
-    const useCase = new ChangeRoleUseCase(repo);
+    const useCase = new ChangeRoleUseCase(repo, makeAuditPort());
 
     await expect(
       useCase.execute(ACTOR_ID, TARGET_ID, { role: 'admin' }),
@@ -67,7 +80,7 @@ describe('ChangeRoleUseCase', () => {
         return null;
       },
     });
-    const useCase = new ChangeRoleUseCase(repo);
+    const useCase = new ChangeRoleUseCase(repo, makeAuditPort());
 
     await expect(
       useCase.execute(ACTOR_ID, TARGET_ID, { role: 'admin' }),
@@ -79,7 +92,7 @@ describe('ChangeRoleUseCase', () => {
     const repo = makeUserRepo({
       findById: async (id) => (id.toString() === ACTOR_ID ? owner : null),
     });
-    const useCase = new ChangeRoleUseCase(repo);
+    const useCase = new ChangeRoleUseCase(repo, makeAuditPort());
 
     await expect(
       useCase.execute(ACTOR_ID, ACTOR_ID, { role: 'admin' }),
@@ -100,12 +113,16 @@ describe('ChangeRoleUseCase', () => {
         updated = user;
       },
     });
-    const useCase = new ChangeRoleUseCase(repo);
+    const audit = makeAuditPort();
+    const useCase = new ChangeRoleUseCase(repo, audit);
 
     const result = await useCase.execute(ACTOR_ID, TARGET_ID, { role: 'admin' });
 
     expect(result.role).toBe('admin');
     expect(result.id).toBe(TARGET_ID);
     expect(updated?.role).toBe('admin');
+    expect(audit.events).toHaveLength(1);
+    expect(audit.events[0]?.eventType).toBe('role_changed');
+    expect(audit.events[0]?.detail).toBe('role changed from member to admin');
   });
 });

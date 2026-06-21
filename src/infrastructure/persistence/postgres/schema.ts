@@ -38,3 +38,22 @@ export const users = pgTable(
 
 export type UserRow = typeof users.$inferSelect;
 export type InsertUserRow = typeof users.$inferInsert;
+
+export const auditLog = pgTable(
+  'audit_log',
+  {
+    id: uuid('id').primaryKey(),
+    eventType: text('event_type').notNull(),
+    actorId: uuid('actor_id'),
+    targetId: uuid('target_id'),
+    detail: text('detail').notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+  },
+  (table) => ({
+    occurredAtIdx: index('audit_log_occurred_at_idx').on(table.occurredAt),
+    actorIdIdx: index('audit_log_actor_id_idx').on(table.actorId),
+  }),
+);
+
+export type AuditLogRow = typeof auditLog.$inferSelect;
+export type InsertAuditLogRow = typeof auditLog.$inferInsert;

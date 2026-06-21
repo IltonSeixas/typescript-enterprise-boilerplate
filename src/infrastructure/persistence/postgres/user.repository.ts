@@ -1,10 +1,10 @@
 import 'reflect-metadata';
-import { eq } from 'drizzle-orm';
+import { asc, count, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { inject, injectable } from 'tsyringe';
 import { User } from '../../../domain/entities/user.entity.js';
 import { OwnerAlreadyExistsError } from '../../../domain/errors/domain.errors.js';
-import type { UserRepository } from '../../../domain/repositories/user.repository.js';
+import type { PaginatedUsers, UserRepository } from '../../../domain/repositories/user.repository.js';
 import { Email } from '../../../domain/value-objects/email.vo.js';
 import { PasswordHash } from '../../../domain/value-objects/password-hash.vo.js';
 import { UserId } from '../../../domain/value-objects/user-id.vo.js';
@@ -71,6 +71,23 @@ export class PostgresUserRepository implements UserRepository {
       .where(eq(users.role, 'owner'))
       .limit(1);
     return rows.length > 0;
+  }
+
+  async findPaginated(offset: number, limit: number): Promise<PaginatedUsers> {
+    const [rows, totalResult] = await Promise.all([
+      this.db
+        .select()
+        .from(users)
+        .orderBy(asc(users.createdAt), asc(users.id))
+        .offset(offset)
+        .limit(limit),
+      this.db.select({ value: count() }).from(users),
+    ]);
+
+    return {
+      items: rows.map((row) => this.hydrate(row)),
+      total: totalResult[0]?.value ?? 0,
+    };
   }
 
   private hydrate(row: UserRow): User {

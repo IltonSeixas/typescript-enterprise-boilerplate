@@ -8,6 +8,13 @@
       "when": 1781206272492,
       "tag": "0000_melodic_mojo",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781994592897,
+      "tag": "0001_create_audit_log",
+      "breakpoints": true
     }
   ]
 }
