@@ -11,6 +11,7 @@ import {
   InvalidRoleError,
   InvalidUserIdError,
   OwnerAlreadyExistsError,
+  ServiceUnavailableError,
   UserInactiveError,
   UserNotFoundError,
 } from '../../domain/errors/domain.errors.js';
@@ -52,6 +53,8 @@ function codeFor(err: DomainError): status {
     case err instanceof ForbiddenError:
     case err instanceof InsufficientPermissionsError:
       return status.PERMISSION_DENIED;
+    case err instanceof ServiceUnavailableError:
+      return status.UNAVAILABLE;
     default:
       return status.INTERNAL;
   }
