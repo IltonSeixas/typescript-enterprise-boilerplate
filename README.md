@@ -128,6 +128,10 @@ The `PasswordHasher` interface in `domain/repositories/` abstracts the algorithm
 - CORS: `@fastify/cors` with explicit allow-list, never `*` in production
 - Input validation: Zod on every route — invalid input returns 400 before reaching the use case
 
+### Audit Logging
+
+Every identity- and access-sensitive use case (registration, login success/failure, password change, role change, token refresh) records an immutable `AuditEvent` through the `AuditPort` interface in `application/ports/`. The in-memory adapter is the zero-config default; the PostgreSQL adapter persists to a dedicated `audit_log` table and never fails the use case it observes, degrading gracefully if the audit store itself is unavailable.
+
 ---
 
 ## API
@@ -205,6 +209,10 @@ Start from the use case interface. Write a test that constructs the use case wit
 ```env
 OTLP_ENDPOINT=http://localhost:4317
 ```
+
+### Resilience
+
+Redis calls made by the JWT service (refresh token issuance, validation, rotation and revocation) are wrapped in a `Closed → Open → Half-Open` circuit breaker (`infrastructure/resilience/circuit-breaker.ts`) combined with a retry policy. A transient Redis failure that succeeds on retry counts as a single success against the breaker's failure rate, rather than inflating it.
 
 ---
 
