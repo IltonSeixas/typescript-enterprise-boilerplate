@@ -16,13 +16,23 @@ import { LoginUserUseCase } from '../../application/use-cases/login-user.use-cas
 import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token.use-case.js';
 import { LogoutUserUseCase } from '../../application/use-cases/logout-user.use-case.js';
 import { GetUserUseCase } from '../../application/use-cases/get-user.use-case.js';
+import { ListUsersUseCase } from '../../application/use-cases/list-users.use-case.js';
 import { UpdateProfileUseCase } from '../../application/use-cases/update-profile.use-case.js';
 import { ChangePasswordUseCase } from '../../application/use-cases/change-password.use-case.js';
+import { ChangeRoleUseCase } from '../../application/use-cases/change-role.use-case.js';
 import { Argon2Hasher } from '../../infrastructure/security/argon2-hasher.js';
 import { InMemoryUserRepository } from '../../infrastructure/persistence/in-memory/user.repository.js';
 import type { TokenServicePort, AccessTokenPayload } from '../../application/ports/token-service.port.js';
+import type { AuditPort } from '../../application/ports/audit.port.js';
+import type { AuditEvent } from '../../domain/entities/audit-event.entity.js';
 import { InvalidRefreshTokenError } from '../../domain/errors/domain.errors.js';
 import { createGrpcServer, startGrpcServer, stopGrpcServer } from './server.js';
+
+function makeInMemoryAuditPort(): AuditPort {
+  return {
+    record: async (_event: AuditEvent) => {},
+  };
+}
 
 const PROTO_PATH = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -127,16 +137,19 @@ describe('gRPC server integration', () => {
     const userRepository = new InMemoryUserRepository();
     const hasher = new Argon2Hasher();
     const tokenService = makeInMemoryTokenService();
+    const audit = makeInMemoryAuditPort();
     const accessTtl = 900;
 
     server = createGrpcServer({
-      registerUser: new RegisterUserUseCase(userRepository, hasher),
-      loginUser: new LoginUserUseCase(userRepository, hasher, tokenService, accessTtl),
-      refreshToken: new RefreshTokenUseCase(userRepository, tokenService, accessTtl),
-      logoutUser: new LogoutUserUseCase(tokenService),
+      registerUser: new RegisterUserUseCase(userRepository, hasher, audit),
+      loginUser: new LoginUserUseCase(userRepository, hasher, tokenService, accessTtl, audit),
+      refreshToken: new RefreshTokenUseCase(userRepository, tokenService, accessTtl, audit),
+      logoutUser: new LogoutUserUseCase(tokenService, audit),
       getUser: new GetUserUseCase(userRepository),
+      listUsers: new ListUsersUseCase(userRepository),
       updateProfile: new UpdateProfileUseCase(userRepository),
-      changePassword: new ChangePasswordUseCase(userRepository, hasher),
+      changePassword: new ChangePasswordUseCase(userRepository, hasher, audit),
+      changeRole: new ChangeRoleUseCase(userRepository, audit),
       tokenService,
       userRepository,
     });

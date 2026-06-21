@@ -12,6 +12,8 @@ import { JwtService } from './infrastructure/security/jwt-service.js';
 import { InMemoryUserRepository } from './infrastructure/persistence/in-memory/user.repository.js';
 import { PostgresUserRepository } from './infrastructure/persistence/postgres/user.repository.js';
 import { createPostgresDatabase } from './infrastructure/persistence/postgres/connection.js';
+import { InMemoryAuditAdapter } from './infrastructure/audit/in-memory-audit.adapter.js';
+import { PostgresAuditAdapter } from './infrastructure/audit/postgres-audit.adapter.js';
 import type { UserRepository } from './domain/repositories/user.repository.js';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { securityHeadersPlugin } from './interfaces/http/plugins/security-headers.plugin.js';
@@ -26,6 +28,7 @@ import { LoginUserUseCase } from './application/use-cases/login-user.use-case.js
 import { LogoutUserUseCase } from './application/use-cases/logout-user.use-case.js';
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token.use-case.js';
 import { GetUserUseCase } from './application/use-cases/get-user.use-case.js';
+import { ListUsersUseCase } from './application/use-cases/list-users.use-case.js';
 import { UpdateProfileUseCase } from './application/use-cases/update-profile.use-case.js';
 import { ChangePasswordUseCase } from './application/use-cases/change-password.use-case.js';
 import { ChangeRoleUseCase } from './application/use-cases/change-role.use-case.js';
@@ -89,6 +92,13 @@ const app = Fastify({
         },
 });
 
+container.register('Logger', { useValue: app.log });
+if (database) {
+  container.registerSingleton('AuditPort', PostgresAuditAdapter);
+} else {
+  container.registerSingleton('AuditPort', InMemoryAuditAdapter);
+}
+
 await app.register(securityHeadersPlugin);
 await app.register(rateLimitPlugin, { max: 100, timeWindow: 60000 });
 
@@ -113,6 +123,7 @@ const loginUser = container.resolve(LoginUserUseCase);
 const refreshToken = container.resolve(RefreshTokenUseCase);
 const logoutUser = container.resolve(LogoutUserUseCase);
 const getUser = container.resolve(GetUserUseCase);
+const listUsers = container.resolve(ListUsersUseCase);
 const updateProfile = container.resolve(UpdateProfileUseCase);
 const changePassword = container.resolve(ChangePasswordUseCase);
 const changeRole = container.resolve(ChangeRoleUseCase);
@@ -130,6 +141,7 @@ await app.register(
     await api.register(userRoutes, {
       prefix: '/users',
       getUser,
+      listUsers,
       updateProfile,
       changePassword,
       changeRole,
@@ -153,6 +165,7 @@ const grpcServer = createGrpcServer({
   refreshToken,
   logoutUser,
   getUser,
+  listUsers,
   updateProfile,
   changePassword,
   changeRole,

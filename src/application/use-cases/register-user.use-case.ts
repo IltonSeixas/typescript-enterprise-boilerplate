@@ -1,11 +1,13 @@
 import 'reflect-metadata';
 import { inject, injectable } from 'tsyringe';
+import { AuditEvent } from '../../domain/entities/audit-event.entity.js';
 import { User } from '../../domain/entities/user.entity.js';
 import { EmailAlreadyExistsError } from '../../domain/errors/domain.errors.js';
 import type { UserRepository } from '../../domain/repositories/user.repository.js';
 import { Email } from '../../domain/value-objects/email.vo.js';
 import { PasswordHash } from '../../domain/value-objects/password-hash.vo.js';
 import { RegisterUserDto } from '../dtos/register-user.dto.js';
+import type { AuditPort } from '../ports/audit.port.js';
 import type { PasswordHasherPort } from '../ports/password-hasher.port.js';
 import { UserOutputDto } from '../dtos/auth-output.dto.js';
 
@@ -14,6 +16,7 @@ export class RegisterUserUseCase {
   constructor(
     @inject('UserRepository') private readonly users: UserRepository,
     @inject('PasswordHasher') private readonly hasher: PasswordHasherPort,
+    @inject('AuditPort') private readonly audit: AuditPort,
   ) {}
 
   async execute(input: RegisterUserDto): Promise<UserOutputDto> {
@@ -39,6 +42,14 @@ export class RegisterUserUseCase {
     } else {
       await this.users.save(user);
     }
+
+    await this.audit.record(
+      AuditEvent.create({
+        eventType: 'user_registered',
+        actorId: user.id.toString(),
+        detail: `user registered with role ${user.role}`,
+      }),
+    );
 
     return toUserOutput(user);
   }

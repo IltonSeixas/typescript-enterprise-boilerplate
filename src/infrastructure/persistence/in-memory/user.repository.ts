@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { injectable } from 'tsyringe';
 import { User } from '../../../domain/entities/user.entity.js';
 import { OwnerAlreadyExistsError } from '../../../domain/errors/domain.errors.js';
-import type { UserRepository } from '../../../domain/repositories/user.repository.js';
+import type { PaginatedUsers, UserRepository } from '../../../domain/repositories/user.repository.js';
 import { Email } from '../../../domain/value-objects/email.vo.js';
 import { UserId } from '../../../domain/value-objects/user-id.vo.js';
 
@@ -49,6 +49,18 @@ export class InMemoryUserRepository implements UserRepository {
       }
     }
     return Promise.resolve(false);
+  }
+
+  findPaginated(offset: number, limit: number): Promise<PaginatedUsers> {
+    const sorted = [...this.store.values()].sort((a, b) => {
+      const byCreatedAt = a.createdAt.getTime() - b.createdAt.getTime();
+      return byCreatedAt !== 0 ? byCreatedAt : a.id.toString().localeCompare(b.id.toString());
+    });
+
+    return Promise.resolve({
+      items: sorted.slice(offset, offset + limit),
+      total: sorted.length,
+    });
   }
 
   clear(): void {

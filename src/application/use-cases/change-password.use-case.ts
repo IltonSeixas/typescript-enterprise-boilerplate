@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { inject, injectable } from 'tsyringe';
+import { AuditEvent } from '../../domain/entities/audit-event.entity.js';
 import {
   InvalidCredentialsError,
   UserNotFoundError,
@@ -8,6 +9,7 @@ import type { UserRepository } from '../../domain/repositories/user.repository.j
 import { UserId } from '../../domain/value-objects/user-id.vo.js';
 import { PasswordHash } from '../../domain/value-objects/password-hash.vo.js';
 import { ChangePasswordDto } from '../dtos/change-password.dto.js';
+import type { AuditPort } from '../ports/audit.port.js';
 import type { PasswordHasherPort } from '../ports/password-hasher.port.js';
 
 @injectable()
@@ -15,6 +17,7 @@ export class ChangePasswordUseCase {
   constructor(
     @inject('UserRepository') private readonly users: UserRepository,
     @inject('PasswordHasher') private readonly hasher: PasswordHasherPort,
+    @inject('AuditPort') private readonly audit: AuditPort,
   ) {}
 
   async execute(userId: string, input: ChangePasswordDto): Promise<void> {
@@ -34,5 +37,14 @@ export class ChangePasswordUseCase {
     const newHash = await this.hasher.hash(input.newPassword);
     const updated = user.changePasswordHash(PasswordHash.fromHash(newHash));
     await this.users.update(updated);
+
+    await this.audit.record(
+      AuditEvent.create({
+        eventType: 'password_changed',
+        actorId: userId,
+        targetId: userId,
+        detail: 'password changed',
+      }),
+    );
   }
 }
