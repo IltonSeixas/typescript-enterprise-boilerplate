@@ -1,11 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import { GetUserUseCase } from '../../../application/use-cases/get-user.use-case.js';
+import { ListUsersUseCase } from '../../../application/use-cases/list-users.use-case.js';
 import { UpdateProfileUseCase } from '../../../application/use-cases/update-profile.use-case.js';
 import { ChangePasswordUseCase } from '../../../application/use-cases/change-password.use-case.js';
 import { ChangeRoleUseCase } from '../../../application/use-cases/change-role.use-case.js';
 import { UpdateProfileSchema } from '../../../application/dtos/update-profile.dto.js';
 import { ChangePasswordSchema } from '../../../application/dtos/change-password.dto.js';
 import { ChangeRoleSchema } from '../../../application/dtos/change-role.dto.js';
+import { ListUsersSchema } from '../../../application/dtos/list-users.dto.js';
 import {
   ForbiddenError,
   InsufficientPermissionsError,
@@ -16,6 +18,7 @@ import { domainError, formatZodError } from '../http-errors.js';
 
 interface UserRoutesOpts {
   getUser: GetUserUseCase;
+  listUsers: ListUsersUseCase;
   updateProfile: UpdateProfileUseCase;
   changePassword: ChangePasswordUseCase;
   changeRole: ChangeRoleUseCase;
@@ -71,6 +74,26 @@ export function userRoutes(app: FastifyInstance, opts: UserRoutesOpts): void {
       }
       if (err instanceof InvalidCredentialsError) {
         return reply.status(401).send(domainError(err));
+      }
+      throw err;
+    }
+  });
+
+  app.get('/', async (request, reply) => {
+    const parsed = ListUsersSchema.safeParse(request.query);
+    if (!parsed.success) {
+      return reply.status(400).send(formatZodError(parsed.error));
+    }
+
+    try {
+      const result = await opts.listUsers.execute(request.auth.id, parsed.data);
+      return reply.status(200).send(result);
+    } catch (err) {
+      if (err instanceof UserNotFoundError) {
+        return reply.status(404).send(domainError(err));
+      }
+      if (err instanceof InsufficientPermissionsError) {
+        return reply.status(403).send(domainError(err));
       }
       throw err;
     }
