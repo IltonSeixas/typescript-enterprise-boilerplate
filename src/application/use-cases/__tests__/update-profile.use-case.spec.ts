@@ -17,6 +17,7 @@ const makeUserRepo = (overrides?: Partial<UserRepository>): UserRepository => ({
   update: async () => {},
   saveFirstOwner: async () => {},
   hasOwner: async () => false,
+  findPaginated: async () => ({ items: [], total: 0 }),
   ...overrides,
 });
 

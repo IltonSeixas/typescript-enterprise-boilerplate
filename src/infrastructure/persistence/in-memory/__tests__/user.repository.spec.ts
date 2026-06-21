@@ -103,4 +103,33 @@ describe('InMemoryUserRepository', () => {
       expect(result).toBe(true);
     });
   });
+
+  describe('findPaginated', () => {
+    it('retorna a página solicitada e o total de usuários', async () => {
+      for (let i = 0; i < 5; i += 1) {
+        await repo.save(makeUser(`00000000-0000-0000-0000-00000000000${i}`, `user${i}@example.com`));
+      }
+
+      const { items, total } = await repo.findPaginated(1, 2);
+
+      expect(total).toBe(5);
+      expect(items).toHaveLength(2);
+    });
+
+    it('retorna página vazia quando o offset excede o total', async () => {
+      await repo.save(makeUser('00000000-0000-0000-0000-000000000001', 'only@example.com'));
+
+      const { items, total } = await repo.findPaginated(10, 5);
+
+      expect(total).toBe(1);
+      expect(items).toHaveLength(0);
+    });
+
+    it('retorna página vazia e total zero quando não há usuários', async () => {
+      const { items, total } = await repo.findPaginated(0, 20);
+
+      expect(total).toBe(0);
+      expect(items).toHaveLength(0);
+    });
+  });
 });
