@@ -58,6 +58,12 @@ const {
   RETRY_MAX_ATTEMPTS,
   RETRY_INITIAL_BACKOFF_MS,
   RETRY_BACKOFF_MULTIPLIER,
+  DB_POOL_MAX,
+  DB_POOL_CONNECT_TIMEOUT_SECONDS,
+  DB_POOL_IDLE_TIMEOUT_SECONDS,
+  DB_POOL_MAX_LIFETIME_SECONDS,
+  REDIS_CONNECT_TIMEOUT_MS,
+  REDIS_COMMAND_TIMEOUT_MS,
 } = env;
 
 const JWT_PRIVATE_KEY = await readFile(JWT_PRIVATE_KEY_PATH, 'utf-8');
@@ -82,7 +88,12 @@ container.register('TokenService', { useClass: JwtService });
 let database: PostgresJsDatabase | undefined;
 
 if (DATABASE_URL) {
-  database = await createPostgresDatabase(DATABASE_URL);
+  database = await createPostgresDatabase(DATABASE_URL, {
+    max: DB_POOL_MAX,
+    idleTimeoutSeconds: DB_POOL_IDLE_TIMEOUT_SECONDS,
+    connectTimeoutSeconds: DB_POOL_CONNECT_TIMEOUT_SECONDS,
+    maxLifetimeSeconds: DB_POOL_MAX_LIFETIME_SECONDS,
+  });
   container.register('Database', { useValue: database });
   container.registerSingleton('UserRepository', PostgresUserRepository);
 } else {
@@ -94,6 +105,8 @@ container.register('JwtPublicKey', { useValue: JWT_PUBLIC_KEY });
 container.register('JwtAccessTtl', { useValue: JWT_ACCESS_TTL });
 container.register('JwtRefreshTtl', { useValue: JWT_REFRESH_TTL });
 container.register('RedisUrl', { useValue: REDIS_URL });
+container.register('RedisConnectTimeoutMs', { useValue: REDIS_CONNECT_TIMEOUT_MS });
+container.register('RedisCommandTimeoutMs', { useValue: REDIS_COMMAND_TIMEOUT_MS });
 
 const app = Fastify({
   logger:
