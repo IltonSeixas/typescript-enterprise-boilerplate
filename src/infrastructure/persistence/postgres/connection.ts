@@ -9,10 +9,23 @@ const MIGRATIONS_FOLDER = path.join(
   'migrations',
 );
 
+export interface PostgresPoolOptions {
+  max: number;
+  idleTimeoutSeconds: number;
+  connectTimeoutSeconds: number;
+  maxLifetimeSeconds: number;
+}
+
 export async function createPostgresDatabase(
   databaseUrl: string,
+  poolOptions: PostgresPoolOptions,
 ): Promise<PostgresJsDatabase> {
-  const client = postgres(databaseUrl, { max: 10 });
+  const client = postgres(databaseUrl, {
+    max: poolOptions.max,
+    idle_timeout: poolOptions.idleTimeoutSeconds,
+    connect_timeout: poolOptions.connectTimeoutSeconds,
+    max_lifetime: poolOptions.maxLifetimeSeconds,
+  });
   const db = drizzle(client);
   await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
   return db;

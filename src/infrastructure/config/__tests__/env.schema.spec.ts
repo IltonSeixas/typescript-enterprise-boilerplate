@@ -19,11 +19,34 @@ describe('EnvSchema', () => {
     expect(env.ALLOWED_ORIGINS).toEqual([]);
   });
 
+  it('applies defaults for pool and redis timeout variables', () => {
+    const env = EnvSchema.parse(validEnv);
+
+    expect(env.DB_POOL_MAX).toBe(10);
+    expect(env.DB_POOL_MIN).toBe(2);
+    expect(env.DB_POOL_CONNECT_TIMEOUT_SECONDS).toBe(30);
+    expect(env.DB_POOL_IDLE_TIMEOUT_SECONDS).toBe(600);
+    expect(env.DB_POOL_MAX_LIFETIME_SECONDS).toBe(1800);
+    expect(env.REDIS_CONNECT_TIMEOUT_MS).toBe(2000);
+    expect(env.REDIS_COMMAND_TIMEOUT_MS).toBe(2000);
+  });
+
   it('coerces numeric variables from strings', () => {
     const env = EnvSchema.parse({ ...validEnv, PORT: '8080', JWT_ACCESS_TTL: '120' });
 
     expect(env.PORT).toBe(8080);
     expect(env.JWT_ACCESS_TTL).toBe(120);
+  });
+
+  it('coerces pool and redis timeout variables from strings', () => {
+    const env = EnvSchema.parse({
+      ...validEnv,
+      DB_POOL_MAX: '25',
+      REDIS_COMMAND_TIMEOUT_MS: '1500',
+    });
+
+    expect(env.DB_POOL_MAX).toBe(25);
+    expect(env.REDIS_COMMAND_TIMEOUT_MS).toBe(1500);
   });
 
   it('splits and trims ALLOWED_ORIGINS into an array', () => {
