@@ -231,6 +231,13 @@ All configuration via environment variables, validated with Zod at startup (inva
 | `JWT_ACCESS_TTL` | `900` | Access token TTL in seconds |
 | `JWT_REFRESH_TTL` | `604800` | Refresh token TTL in seconds |
 | `REDIS_URL` | `redis://localhost:6379` | Redis connection string (refresh token storage) |
+| `DB_POOL_MAX` | `10` | Maximum number of pooled Postgres connections (only used when `DATABASE_URL` is set) |
+| `DB_POOL_MIN` | `2` | Accepted for parity with the other boilerplates — `postgres-js` has no minimum-connections concept, so this value is unused |
+| `DB_POOL_CONNECT_TIMEOUT_SECONDS` | `30` | Max time to wait for a free connection from the pool, in seconds |
+| `DB_POOL_IDLE_TIMEOUT_SECONDS` | `600` | Time before an idle connection above the minimum is closed, in seconds |
+| `DB_POOL_MAX_LIFETIME_SECONDS` | `1800` | Max lifetime of a pooled connection before it is recycled, in seconds |
+| `REDIS_CONNECT_TIMEOUT_MS` | `2000` | Max time to establish the Redis TCP connection, in milliseconds |
+| `REDIS_COMMAND_TIMEOUT_MS` | `2000` | Max time to wait for a Redis command response, in milliseconds |
 | `ALLOWED_ORIGINS` | — | Comma-separated CORS allow-list — empty disables cross-origin requests entirely |
 | `OTLP_ENDPOINT` | `http://localhost:4317` | OTLP gRPC endpoint for traces |
 
