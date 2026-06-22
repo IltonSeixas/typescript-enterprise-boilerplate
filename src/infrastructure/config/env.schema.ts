@@ -29,6 +29,13 @@ export const EnvSchema = z.object({
   RETRY_MAX_ATTEMPTS: z.coerce.number().int().positive().default(3),
   RETRY_INITIAL_BACKOFF_MS: z.coerce.number().int().positive().default(50),
   RETRY_BACKOFF_MULTIPLIER: z.coerce.number().int().positive().default(2),
+  DB_POOL_MAX: z.coerce.number().int().positive().default(10),
+  DB_POOL_MIN: z.coerce.number().int().nonnegative().default(2),
+  DB_POOL_CONNECT_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(30),
+  DB_POOL_IDLE_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(600),
+  DB_POOL_MAX_LIFETIME_SECONDS: z.coerce.number().int().positive().default(1800),
+  REDIS_CONNECT_TIMEOUT_MS: z.coerce.number().int().positive().default(2000),
+  REDIS_COMMAND_TIMEOUT_MS: z.coerce.number().int().positive().default(2000),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

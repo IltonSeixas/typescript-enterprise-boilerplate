@@ -15,10 +15,14 @@ export class RedisStore {
     @inject('RedisUrl') redisUrl: string,
     @inject('RedisCircuitBreaker') private readonly breaker: CircuitBreaker,
     @inject('RedisRetryPolicy') private readonly retryPolicy: RetryPolicy,
+    @inject('RedisConnectTimeoutMs') connectTimeoutMs: number,
+    @inject('RedisCommandTimeoutMs') commandTimeoutMs: number,
   ) {
     this.client = new Redis(redisUrl, {
       lazyConnect: true,
       enableOfflineQueue: false,
+      connectTimeout: connectTimeoutMs,
+      commandTimeout: commandTimeoutMs,
     });
   }
 
