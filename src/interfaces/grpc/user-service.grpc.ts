@@ -11,9 +11,9 @@ import type { UserOutputDto } from '../../application/dtos/auth-output.dto.js';
 import type { ListUsersOutputDto } from '../../application/dtos/list-users.dto.js';
 import type { TokenServicePort } from '../../application/ports/token-service.port.js';
 import type { UserRepository } from '../../domain/repositories/user.repository.js';
-import { InvalidRoleError } from '../../domain/errors/domain.errors.js';
 import { authenticateCall } from './grpc-auth.guard.js';
 import { toGrpcError } from './grpc-error.mapper.js';
+import { parseRequest } from './parse-request.js';
 
 type GetMeRequest = Record<string, never>;
 
@@ -73,7 +73,7 @@ export class UserServiceGrpc {
     callback: sendUnaryData<UserOutputDto>,
   ): void => {
     void this.handle(call, callback, async (request, callerId) => {
-      const input = UpdateProfileSchema.parse({ name: request.name });
+      const input = parseRequest(UpdateProfileSchema, { name: request.name });
       return this.updateProfile.execute(callerId, input);
     });
   };
@@ -83,7 +83,7 @@ export class UserServiceGrpc {
     callback: sendUnaryData<Record<string, never>>,
   ): void => {
     void this.handle(call, callback, async (request, callerId) => {
-      const input = ChangePasswordSchema.parse({
+      const input = parseRequest(ChangePasswordSchema, {
         currentPassword: request.currentPassword,
         newPassword: request.newPassword,
       });
@@ -97,11 +97,8 @@ export class UserServiceGrpc {
     callback: sendUnaryData<UserOutputDto>,
   ): void => {
     void this.handle(call, callback, async (request, callerId) => {
-      const parsed = ChangeRoleSchema.safeParse({ role: request.role });
-      if (!parsed.success) {
-        throw new InvalidRoleError(request.role);
-      }
-      return this.changeRole.execute(callerId, request.userId, parsed.data);
+      const input = parseRequest(ChangeRoleSchema, { role: request.role });
+      return this.changeRole.execute(callerId, request.userId, input);
     });
   };
 

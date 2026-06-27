@@ -240,6 +240,7 @@ All configuration via environment variables, validated with Zod at startup (inva
 | `REDIS_COMMAND_TIMEOUT_MS` | `2000` | Max time to wait for a Redis command response, in milliseconds |
 | `ALLOWED_ORIGINS` | — | Comma-separated CORS allow-list — empty disables cross-origin requests entirely |
 | `OTLP_ENDPOINT` | `http://localhost:4317` | OTLP gRPC endpoint for traces |
+| `METRICS_TOKEN` | — | Optional bearer token required to access `/metrics` — unset leaves the endpoint open |
 
 The global rate limit (100 requests per 60-second window per IP, via `@fastify/rate-limit`) is currently fixed in the composition root (`src/main.ts`) rather than environment-driven — adjust it there if your deployment needs different values.
 

@@ -8,7 +8,7 @@ export class Email {
   static create(raw: string): Email {
     const trimmed = raw.trim().toLowerCase();
     if (!EMAIL_REGEX.test(trimmed) || trimmed.length > 254) {
-      throw new InvalidEmailError(raw);
+      throw new InvalidEmailError();
     }
     return new Email(trimmed);
   }

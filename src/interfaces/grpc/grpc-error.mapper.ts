@@ -1,4 +1,5 @@
 import { status } from '@grpc/grpc-js';
+import { ZodError } from 'zod';
 import {
   DomainError,
   EmailAlreadyExistsError,
@@ -31,7 +32,15 @@ export function toGrpcError(err: unknown): GrpcError {
     return new GrpcError(codeFor(err), err.message);
   }
 
+  if (err instanceof ZodError) {
+    return new GrpcError(status.INVALID_ARGUMENT, formatZodIssues(err));
+  }
+
   return new GrpcError(status.INTERNAL, 'An unexpected error occurred');
+}
+
+function formatZodIssues(err: ZodError): string {
+  return err.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ');
 }
 
 function codeFor(err: DomainError): status {

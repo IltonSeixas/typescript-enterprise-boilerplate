@@ -11,8 +11,8 @@ export abstract class DomainError extends Error {
 export class InvalidEmailError extends DomainError {
   readonly code = 'INVALID_EMAIL';
 
-  constructor(raw: string) {
-    super(`Invalid email address: ${raw}`);
+  constructor() {
+    super('Invalid email address');
   }
 }
 
@@ -35,8 +35,8 @@ export class InvalidUserIdError extends DomainError {
 export class EmailAlreadyExistsError extends DomainError {
   readonly code = 'EMAIL_ALREADY_EXISTS';
 
-  constructor(email: string) {
-    super(`Email already registered: ${email}`);
+  constructor() {
+    super('Email already registered');
   }
 }
 

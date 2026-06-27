@@ -7,6 +7,7 @@ import { RegisterUserSchema } from '../../application/dtos/register-user.dto.js'
 import { LoginUserSchema } from '../../application/dtos/login-user.dto.js';
 import type { AuthOutputDto, UserOutputDto } from '../../application/dtos/auth-output.dto.js';
 import { toGrpcError } from './grpc-error.mapper.js';
+import { parseRequest } from './parse-request.js';
 
 interface RegisterRequest {
   email: string;
@@ -42,7 +43,7 @@ export class AuthServiceGrpc {
     callback: sendUnaryData<UserOutputDto>,
   ): void => {
     void this.handle(call, callback, async (request) => {
-      const input = RegisterUserSchema.parse({
+      const input = parseRequest(RegisterUserSchema, {
         name: request.name,
         email: request.email,
         password: request.password,
@@ -56,7 +57,7 @@ export class AuthServiceGrpc {
     callback: sendUnaryData<AuthResponse>,
   ): void => {
     void this.handle(call, callback, async (request) => {
-      const input = LoginUserSchema.parse({
+      const input = parseRequest(LoginUserSchema, {
         email: request.email,
         password: request.password,
       });

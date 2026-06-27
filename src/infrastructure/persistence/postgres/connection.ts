@@ -1,8 +1,10 @@
 import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import postgres from 'postgres';
+import postgres, { Sql } from 'postgres';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+
+export type PostgresDatabase = PostgresJsDatabase & { $client: Sql };
 
 const MIGRATIONS_FOLDER = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -46,7 +48,7 @@ async function runMigrations(databaseUrl: string): Promise<void> {
 export async function createPostgresDatabase(
   databaseUrl: string,
   poolOptions: PostgresPoolOptions,
-): Promise<PostgresJsDatabase> {
+): Promise<PostgresDatabase> {
   await runMigrations(databaseUrl);
   const client = postgres(databaseUrl, {
     max: poolOptions.max,

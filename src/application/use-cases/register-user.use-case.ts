@@ -23,7 +23,7 @@ export class RegisterUserUseCase {
     const email = Email.create(input.email);
     const existing = await this.users.findByEmail(email);
     if (existing !== null) {
-      throw new EmailAlreadyExistsError(email.toString());
+      throw new EmailAlreadyExistsError();
     }
 
     const ownerExists = await this.users.hasOwner();

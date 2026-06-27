@@ -13,11 +13,13 @@ import { Argon2Hasher } from './infrastructure/security/argon2-hasher.js';
 import { JwtService } from './infrastructure/security/jwt-service.js';
 import { InMemoryUserRepository } from './infrastructure/persistence/in-memory/user.repository.js';
 import { PostgresUserRepository } from './infrastructure/persistence/postgres/user.repository.js';
-import { createPostgresDatabase } from './infrastructure/persistence/postgres/connection.js';
+import {
+  createPostgresDatabase,
+  type PostgresDatabase,
+} from './infrastructure/persistence/postgres/connection.js';
 import { InMemoryAuditAdapter } from './infrastructure/audit/in-memory-audit.adapter.js';
 import { PostgresAuditAdapter } from './infrastructure/audit/postgres-audit.adapter.js';
 import type { UserRepository } from './domain/repositories/user.repository.js';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { securityHeadersPlugin } from './interfaces/http/plugins/security-headers.plugin.js';
 import { rateLimitPlugin } from './interfaces/http/plugins/rate-limit.plugin.js';
 import { authPlugin } from './interfaces/http/plugins/auth.plugin.js';
@@ -64,6 +66,7 @@ const {
   DB_POOL_MAX_LIFETIME_SECONDS,
   REDIS_CONNECT_TIMEOUT_MS,
   REDIS_COMMAND_TIMEOUT_MS,
+  METRICS_TOKEN,
 } = env;
 
 const JWT_PRIVATE_KEY = await readFile(JWT_PRIVATE_KEY_PATH, 'utf-8');
@@ -85,7 +88,7 @@ container.registerSingleton('RedisStore', RedisStore);
 container.register('PasswordHasher', { useClass: Argon2Hasher });
 container.register('TokenService', { useClass: JwtService });
 
-let database: PostgresJsDatabase | undefined;
+let database: PostgresDatabase | undefined;
 
 if (DATABASE_URL) {
   database = await createPostgresDatabase(DATABASE_URL, {
@@ -139,7 +142,7 @@ await app.register(authPlugin, { userRepository, tokenService });
 await app.register(fastifyCookie);
 
 await app.register(healthRoutes, { redisStore, database });
-await app.register(metricsRoutes);
+await app.register(metricsRoutes, { metricsToken: METRICS_TOKEN });
 
 await app.register(fastifyCors, {
   origin: ALLOWED_ORIGINS.length > 0 ? ALLOWED_ORIGINS : false,
@@ -178,15 +181,14 @@ await app.register(
   { prefix: '/api/v1' },
 );
 
-app.setErrorHandler((err, _request, reply) => {
+app.setErrorHandler(async (err, _request, reply) => {
   app.log.error(err);
 
   if (err instanceof ServiceUnavailableError) {
-    void reply.status(503).send(domainError(err));
-    return;
+    return reply.status(503).send(domainError(err));
   }
 
-  void reply.status(500).send({
+  return reply.status(500).send({
     statusCode: 500,
     error: 'Internal Server Error',
     message: 'An unexpected error occurred',
@@ -212,6 +214,9 @@ const shutdown = async (): Promise<void> => {
   await app.close();
   await stopGrpcServer(grpcServer);
   await redisStore.disconnect();
+  if (database) {
+    await database.$client.end();
+  }
   process.exit(0);
 };
 

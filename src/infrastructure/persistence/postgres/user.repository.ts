@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { asc, count, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 import { inject, injectable } from 'tsyringe';
 import { User } from '../../../domain/entities/user.entity.js';
 import { OwnerAlreadyExistsError } from '../../../domain/errors/domain.errors.js';
@@ -56,8 +57,8 @@ export class PostgresUserRepository implements UserRepository {
     try {
       await this.db.insert(users).values(this.toRow(user));
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      if (message.includes('users_owner_unique_idx')) {
+      const postgresError = findPostgresError(err);
+      if (postgresError?.code === '23505' && postgresError.constraint_name === 'users_owner_unique_idx') {
         throw new OwnerAlreadyExistsError();
       }
       throw err;
@@ -115,4 +116,15 @@ export class PostgresUserRepository implements UserRepository {
       updatedAt: user.updatedAt,
     };
   }
+}
+
+function findPostgresError(err: unknown): postgres.PostgresError | undefined {
+  let current: unknown = err;
+  while (current instanceof Error) {
+    if (current instanceof postgres.PostgresError) {
+      return current;
+    }
+    current = current.cause;
+  }
+  return undefined;
 }

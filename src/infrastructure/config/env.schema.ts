@@ -36,6 +36,7 @@ export const EnvSchema = z.object({
   DB_POOL_MAX_LIFETIME_SECONDS: z.coerce.number().int().positive().default(1800),
   REDIS_CONNECT_TIMEOUT_MS: z.coerce.number().int().positive().default(2000),
   REDIS_COMMAND_TIMEOUT_MS: z.coerce.number().int().positive().default(2000),
+  METRICS_TOKEN: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
