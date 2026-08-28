@@ -1,12 +1,12 @@
 # Stage 1: dependencies
-FROM oven/bun:1.3-alpine AS deps
+FROM oven/bun:1.4-alpine AS deps
 
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production
 
 # Stage 2: build
-FROM oven/bun:1.3-alpine AS builder
+FROM oven/bun:1.4-alpine AS builder
 
 WORKDIR /app
 COPY package.json bun.lock tsconfig.json tsconfig.build.json ./
@@ -17,7 +17,7 @@ RUN bun run build \
     && cp -r src/infrastructure/persistence/postgres/migrations/. dist/infrastructure/persistence/postgres/migrations/
 
 # Stage 3: runtime
-FROM oven/bun:1.3-alpine AS runtime
+FROM oven/bun:1.4-alpine AS runtime
 
 RUN addgroup --system --gid 1001 app \
     && adduser --system --uid 1001 --ingroup app app
